@@ -1,0 +1,13 @@
+[server]
+headless = true
+
+[theme]
+base = "light"
+
+[client]
+showSidebarNavigation = false
+
+[general]
+pageTitle = "Multi-Page App"
+pageIcon = "📚"
+target = "app.py"
