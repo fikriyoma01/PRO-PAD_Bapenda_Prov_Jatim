@@ -13,6 +13,71 @@ from data_loader import (
 
 MACROS = ["PDRB", "Rasio Gini", "IPM", "TPT", "Kemiskinan", "Inflasi", "Suku Bunga"]
 
+def local_css():
+    st.markdown(
+        """
+        <style>
+            .insight-header {
+                background: linear-gradient(90deg, #1a5fb4, #3584e4);
+                padding: 18px;
+                border-radius: 12px;
+                margin-bottom: 25px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+            }
+            .insight-header h1 {
+                color: #ffffff;
+                margin: 0;
+                font-size: 2.2rem;
+                font-weight: 700;
+            }
+            .insight-header p {
+                color: #f1f1f1;
+                margin: 0;
+                font-size: 1.05rem;
+            }
+            .insight-section-title {
+                font-size: 1.35rem;
+                font-weight: 700;
+                color: #1e3c72;
+                margin: 32px 0 16px;
+                border-left: 5px solid #ffd700;
+                padding-left: 12px;
+            }
+            .insight-divider {
+                margin: 24px 0;
+                border: none;
+                border-top: 1px solid rgba(30, 60, 114, 0.15);
+            }
+            div[data-testid="metric-container"] {
+                background: linear-gradient(135deg, #f0f6ff, #dce9ff);
+                border-radius: 12px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+                padding: 16px;
+            }
+            div[data-testid="metric-container"] label {
+                color: #1e3c72;
+                font-weight: 600;
+            }
+            div[data-testid="metric-container"] div {
+                color: #1e3c72;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_section_title(text: str) -> None:
+    st.markdown(
+        f"<div class='insight-section-title'>{text}</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def render_divider() -> None:
+    st.markdown("<hr class='insight-divider'>", unsafe_allow_html=True)
+
+
 
 def format_rupiah(value: float, signed: bool = False) -> str:
     formatted = f"Rp {abs(value):,.0f}".replace(",", ".")
@@ -124,7 +189,25 @@ def build_combined_time_series(hist: pd.DataFrame, pkb25: dict, pkb26: dict, bbn
         ]
     )
 
-    return pd.concat([actual, projections], ignore_index=True)
+    last_year = hist["Tahun"].max()
+    bridge_rows = []
+    last_row = hist.loc[hist["Tahun"] == last_year]
+    if not last_row.empty:
+        for jenis in ["PKB", "BBNKB"]:
+            bridge_rows.append(
+                {
+                    "Tahun": int(last_year),
+                    "Jenis": jenis,
+                    "Nilai": float(last_row[jenis].iloc[0]),
+                    "Status": "Proyeksi",
+                }
+            )
+    if bridge_rows:
+        projections = pd.concat([pd.DataFrame(bridge_rows), projections], ignore_index=True)
+
+    combined = pd.concat([actual, projections], ignore_index=True)
+    combined = combined.sort_values(["Jenis", "Tahun", "Status"]).reset_index(drop=True)
+    return combined
 
 
 def build_macro_series(hist: pd.DataFrame, pkb25: dict, pkb26: dict) -> pd.DataFrame:
@@ -171,10 +254,15 @@ def build_bbnkb_overview(bbn25: dict, bbn26: dict) -> pd.DataFrame:
 
 
 def app():
-    st.title("📊 Insight Terpadu PAD 2018-2026")
-    st.caption(
-        "🧭 Ringkasan interaktif yang menyatukan tren historis, pemodelan regresi, proyeksi, dan dekomposisi "
-        "untuk PKB dan BBNKB."
+    local_css()
+    st.markdown(
+        """
+        <div class="insight-header">
+            <h1>📊 Insight Terpadu PAD 2018-2026</h1>
+            <p>🧭 Ringkasan interaktif yang menyatukan tren historis, pemodelan regresi, proyeksi, dan dekomposisi untuk PKB dan BBNKB.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
     hist = load_pad_historis()
@@ -193,7 +281,7 @@ def app():
     pkb_contrib = build_pkb_contribution(pkb25, pkb26)
     bbn_overview = build_bbnkb_overview(bbn25, bbn26)
 
-    st.markdown("### 📈 Tren PAD 2018-2026")
+    render_section_title("📈 Tren PAD 2018-2026")
     fig_trend = px.line(
         combined_series,
         x="Tahun",
@@ -204,6 +292,7 @@ def app():
         template="plotly_white",
         labels={"Nilai": "Rupiah"},
         title="📈 PKB dan BBNKB: Aktual vs Proyeksi",
+        category_orders={"Status": ["Aktual", "Proyeksi"]},
     )
     st.plotly_chart(fig_trend, use_container_width=True)
 
@@ -224,8 +313,8 @@ def app():
         delta=f"{format_rupiah(bbn26['neto'] - bbn26['target'], signed=True)} vs target",
     )
 
-    st.markdown("---")
-    st.markdown("### 🌐 Dinamika Variabel Makro")
+    render_divider()
+    render_section_title("🌐 Dinamika Variabel Makro")
     selected_macros = st.multiselect(
         "🌐 Pilih variabel makro",
         MACROS,
@@ -244,8 +333,8 @@ def app():
     )
     st.plotly_chart(fig_macro, use_container_width=True)
 
-    st.markdown("---")
-    st.markdown("### 🧪 Insight Pemodelan Regresi")
+    render_divider()
+    render_section_title("🧪 Insight Pemodelan Regresi")
     response = st.selectbox("🎯 Variabel respon", ["PKB", "BBNKB"], index=0)
     predictor = st.selectbox("🧭 Variabel makro", MACROS, index=0)
 
@@ -317,8 +406,8 @@ def app():
     else:
         st.warning(f"⚠️ {predictor} tidak signifikan, namun bisa sebagai faktor **{arah}**.")
 
-    st.markdown("---")
-    st.markdown("### 🧩 Ringkasan Dekomposisi Potensi")
+    render_divider()
+    render_section_title("🧩 Ringkasan Dekomposisi Potensi")
     fig_contrib = px.bar(
         pkb_contrib,
         x="Tahun",
@@ -341,7 +430,7 @@ def app():
     )
     st.plotly_chart(fig_bbn, use_container_width=True)
 
-    st.markdown("### 🧾 Tabel Ringkas Potensi vs Target")
+    render_section_title("🧾 Tabel Ringkas Potensi vs Target")
     st.dataframe(
         pd.DataFrame(
             {
