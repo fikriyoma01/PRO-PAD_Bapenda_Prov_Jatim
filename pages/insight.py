@@ -1,4 +1,4 @@
-import streamlit as st
+﻿import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -48,18 +48,42 @@ def local_css():
                 border: none;
                 border-top: 1px solid rgba(30, 60, 114, 0.15);
             }
-            div[data-testid="metric-container"] {
-                background: linear-gradient(135deg, #f0f6ff, #dce9ff);
+            .metric-box {
                 border-radius: 12px;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-                padding: 16px;
+                padding: 1.5rem;
+                text-align: center;
+                font-weight: bold;
+                font-size: 1.2rem;
+                color: white;
+                margin: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             }
-            div[data-testid="metric-container"] label {
-                color: #1e3c72;
-                font-weight: 600;
+            .metric-koef {
+                background: linear-gradient(135deg, #64b5f6, #1976d2);
             }
-            div[data-testid="metric-container"] div {
-                color: #1e3c72;
+            .metric-r2 {
+                background: linear-gradient(135deg, #81c784, #388e3c);
+            }
+            .metric-pval {
+                background: linear-gradient(135deg, #ffb74d, #f57c00);
+            }
+            .metric-box span {
+                display: block;
+                font-size: 1.8rem;
+                margin-top: 6px;
+            }
+            .note-box {
+                background: #fff8e1;
+                border-left: 6px solid #fbc02d;
+                border-radius: 10px;
+                padding: 1rem;
+                margin: 1rem 0;
+                font-size: 0.95rem;
+                color: #4e342e;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            }
+            .note-box strong {
+                color: #e65100;
             }
         </style>
         """,
@@ -90,29 +114,40 @@ def format_rupiah(value: float, signed: bool = False) -> str:
 def build_macro_models(hist: pd.DataFrame):
     X_year = sm.add_constant(hist["Tahun"])
     trend_params = {}
-    beta_coeffs = {}
+    beta_coeffs = {"PKB": {}, "BBNKB": {}}
     for var in MACROS:
         trend_model = sm.OLS(hist[var], X_year).fit()
         trend_params[var] = {
             "const": float(trend_model.params["const"]),
             "tahun": float(trend_model.params["Tahun"]),
         }
-        beta_model = sm.OLS(hist["PKB"], sm.add_constant(hist[[var]])).fit()
-        beta_coeffs[var] = float(beta_model.params[var])
+        for response_col in ("PKB", "BBNKB"):
+            beta_model = sm.OLS(hist[response_col], sm.add_constant(hist[[var]])).fit()
+            beta_coeffs[response_col][var] = float(beta_model.params[var])
     return trend_params, beta_coeffs
 
 
-def compute_macro_effects(year: int, baseline: dict, trend_params: dict, beta_coeffs: dict):
+def compute_macro_effects(
+    year: int,
+    baseline: dict,
+    trend_params: dict,
+    beta_coeffs: dict,
+    response: str = "PKB",
+):
     rows = []
     total_plus = 0.0
     total_minus = 0.0
     predictions = {}
 
+    beta_map = beta_coeffs
+    if isinstance(beta_coeffs, dict) and response in beta_coeffs:
+        beta_map = beta_coeffs[response]
+
     for var in MACROS:
         params = trend_params[var]
         predicted = params["const"] + params["tahun"] * year
         delta = predicted - baseline[var]
-        impact = beta_coeffs[var] * delta
+        impact = beta_map.get(var, 0.0) * delta
         predictions[var] = predicted
 
         if impact >= 0:
@@ -130,8 +165,8 @@ def compute_macro_effects(year: int, baseline: dict, trend_params: dict, beta_co
             }
         )
 
-    return pd.DataFrame(rows), total_plus, total_minus, predictions
-
+    df_macro = pd.DataFrame(rows)
+    return df_macro, total_plus, total_minus, predictions
 
 def compute_pkb_summary(hist: pd.DataFrame, trend_params: dict, beta_coeffs: dict, year: int, baseline: dict):
     inputs = get_pkb_inputs(year)
@@ -141,7 +176,7 @@ def compute_pkb_summary(hist: pd.DataFrame, trend_params: dict, beta_coeffs: dic
     pengurang = inputs.loc[inputs["kategori"] == "pengurang", "nilai"].sum()
 
     macro_df, macro_plus, macro_minus, predicted_macro = compute_macro_effects(
-        year, baseline, trend_params, beta_coeffs
+        year, baseline, trend_params, beta_coeffs, response="PKB"
     )
 
     total = penambah - pengurang + macro_plus + macro_minus
@@ -160,22 +195,43 @@ def compute_pkb_summary(hist: pd.DataFrame, trend_params: dict, beta_coeffs: dic
     }
 
 
-def compute_bbnkb_summary(year: int):
+def compute_bbnkb_summary(
+    hist: pd.DataFrame,
+    trend_params: dict,
+    beta_coeffs: dict,
+    year: int,
+    baseline: dict,
+):
     inputs = get_bbnkb_inputs(year)
     values = map_inputs(inputs)
-    total = values.get("Total", 0.0)
-    pengurang = values.get("Pengurang", 0.0)
-    neto = total - pengurang
+
+    structural_total = values.get("Total", 0.0)
+    pengurang = inputs.loc[inputs["kategori"] == "pengurang", "nilai"].sum()
+
+    macro_df, macro_plus, macro_minus, predicted_macro = compute_macro_effects(
+        year,
+        baseline,
+        trend_params,
+        beta_coeffs,
+        response="BBNKB",
+    )
+
+    net_structural = structural_total - pengurang
+    total = net_structural + macro_plus + macro_minus
+
     return {
         "inputs": inputs,
         "values": values,
-        "total": total,
+        "structural_total": structural_total,
         "pengurang": pengurang,
-        "neto": neto,
+        "macro_plus": macro_plus,
+        "macro_minus": macro_minus,
+        "macro_df": macro_df,
+        "predicted_macro": predicted_macro,
+        "neto": net_structural,
+        "total": total,
         "target": values.get("Target", 0.0),
     }
-
-
 def build_combined_time_series(hist: pd.DataFrame, pkb25: dict, pkb26: dict, bbn25: dict, bbn26: dict) -> pd.DataFrame:
     actual = hist[["Tahun", "PKB", "BBNKB"]].melt("Tahun", var_name="Jenis", value_name="Nilai")
     actual["Status"] = "Aktual"
@@ -184,8 +240,8 @@ def build_combined_time_series(hist: pd.DataFrame, pkb25: dict, pkb26: dict, bbn
         [
             {"Tahun": 2025, "Jenis": "PKB", "Nilai": pkb25["total"], "Status": "Proyeksi"},
             {"Tahun": 2026, "Jenis": "PKB", "Nilai": pkb26["total"], "Status": "Proyeksi"},
-            {"Tahun": 2025, "Jenis": "BBNKB", "Nilai": bbn25["neto"], "Status": "Proyeksi"},
-            {"Tahun": 2026, "Jenis": "BBNKB", "Nilai": bbn26["neto"], "Status": "Proyeksi"},
+            {"Tahun": 2025, "Jenis": "BBNKB", "Nilai": bbn25["total"], "Status": "Proyeksi"},
+            {"Tahun": 2026, "Jenis": "BBNKB", "Nilai": bbn26["total"], "Status": "Proyeksi"},
         ]
     )
 
@@ -269,12 +325,14 @@ def app():
     trend_params, beta_coeffs = build_macro_models(hist)
 
     baseline_2024 = {var: float(hist.iloc[-1][var]) for var in MACROS}
+    baseline_2024 = {var: float(hist.iloc[-1][var]) for var in MACROS}
     pkb25 = compute_pkb_summary(hist, trend_params, beta_coeffs, 2025, baseline_2024)
-    baseline_2026 = {var: float(pkb25["predicted_macro"][var]) for var in MACROS}
-    pkb26 = compute_pkb_summary(hist, trend_params, beta_coeffs, 2026, baseline_2026)
+    baseline_pkb_2026 = {var: float(pkb25["predicted_macro"][var]) for var in MACROS}
+    pkb26 = compute_pkb_summary(hist, trend_params, beta_coeffs, 2026, baseline_pkb_2026)
 
-    bbn25 = compute_bbnkb_summary(2025)
-    bbn26 = compute_bbnkb_summary(2026)
+    bbn25 = compute_bbnkb_summary(hist, trend_params, beta_coeffs, 2025, baseline_2024)
+    baseline_bbn_2026 = {var: float(bbn25["predicted_macro"][var]) for var in MACROS}
+    bbn26 = compute_bbnkb_summary(hist, trend_params, beta_coeffs, 2026, baseline_bbn_2026)
 
     combined_series = build_combined_time_series(hist, pkb25, pkb26, bbn25, bbn26)
     macro_series = build_macro_series(hist, pkb25, pkb26)
@@ -294,6 +352,7 @@ def app():
         title="📈 PKB dan BBNKB: Aktual vs Proyeksi",
         category_orders={"Status": ["Aktual", "Proyeksi"]},
     )
+    fig_trend.update_yaxes(rangemode='tozero')
     st.plotly_chart(fig_trend, use_container_width=True)
 
     col1, col2, col3 = st.columns(3)
@@ -309,8 +368,8 @@ def app():
     )
     col3.metric(
         "🔁 BBNKB 2026 Neto",
-        format_rupiah(bbn26["neto"]),
-        delta=f"{format_rupiah(bbn26['neto'] - bbn26['target'], signed=True)} vs target",
+        format_rupiah(bbn26["total"]),
+        delta=f"{format_rupiah(bbn26['total'] - bbn26['target'], signed=True)} vs target",
     )
 
     render_divider()
@@ -391,9 +450,9 @@ def app():
     st.plotly_chart(fig_model, use_container_width=True)
 
     col_a, col_b, col_c = st.columns(3)
-    col_a.metric("📐 Koefisien", f"{coef:,.2f}")
-    col_b.metric("📊 R²", f"{r_squared:.3f}")
-    col_c.metric("🧪 p-value", f"{p_value:.3f}")
+    col_a.markdown(f"<div class=\"metric-box metric-koef\">📐 Koefisien<span>{coef:,.2f}</span></div>", unsafe_allow_html=True)
+    col_b.markdown(f"<div class=\"metric-box metric-r2\">📊 R²<span>{r_squared:.3f}</span></div>", unsafe_allow_html=True)
+    col_c.markdown(f"<div class=\"metric-box metric-pval\">🧪 p-value<span>{p_value:.3f}</span></div>", unsafe_allow_html=True)
     
     # Persamaan Regresi
     st.subheader("📑 Persamaan Regresi")
@@ -413,22 +472,19 @@ def app():
         x="Tahun",
         y="Nilai",
         color="Kategori",
-        barmode="relative",
         template="plotly_white",
         title="🧩 Kontributor Potensi PKB 2025-2026",
+        barmode="group",
+        hover_data={"Nilai": ":,.0f"},
+    )
+    fig_contrib.update_layout(
+        legend_title="Kategori",
+        bargap=0.25,
+        hovermode="x unified",
+        xaxis_title="Tahun",
+        yaxis_title="Nilai (Rp)",
     )
     st.plotly_chart(fig_contrib, use_container_width=True)
-
-    fig_bbn = px.bar(
-        bbn_overview,
-        x="Tahun",
-        y="Nilai",
-        color="Komponen",
-        barmode="group",
-        template="plotly_white",
-        title="🔁 BBNKB 2025-2026: Potensi vs Target",
-    )
-    st.plotly_chart(fig_bbn, use_container_width=True)
 
     render_section_title("🧾 Tabel Ringkas Potensi vs Target")
     st.dataframe(
@@ -437,13 +493,13 @@ def app():
                 "Tahun": [2025, 2026],
                 "PKB Potensi": [pkb25["total"], pkb26["total"]],
                 "PKB Target": [pkb25["target"], pkb26["target"]],
-                "BBNKB Neto": [bbn25["neto"], bbn26["neto"]],
+                "BBNKB Potensi": [bbn25["total"], bbn26["total"]],
                 "BBNKB Target": [bbn25["target"], bbn26["target"]],
             }
         ).style.format({
             "PKB Potensi": "Rp{:,.0f}",
             "PKB Target": "Rp{:,.0f}",
-            "BBNKB Neto": "Rp{:,.0f}",
+            "BBNKB Potensi": "Rp{:,.0f}",
             "BBNKB Target": "Rp{:,.0f}",
         }),
         use_container_width=True,
@@ -452,3 +508,4 @@ def app():
 
 if __name__ == "__main__":
     app()
+

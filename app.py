@@ -1,4 +1,4 @@
-import streamlit as st
+﻿import streamlit as st
 import importlib
 
 # --- Konfigurasi halaman
@@ -11,7 +11,8 @@ PAGES = {
     "📊 Pemodelan": "pemodelan",
     "📈 Proyeksi": "proyeksi",
     "⚖️ Dekomposisi": "dekomposisi",
-    "🧭 Insight Terpadu": "insight"
+    "🧭 Insight Terpadu": "insight",
+    "📘 Implementasi Skenario HKPD": "hkpd"
 }
 
 # --- Inisialisasi session state
@@ -20,23 +21,24 @@ if "current_page" not in st.session_state:
 
 # --- Sidebar Styling & Render
 def render_sidebar():
-    st.sidebar.markdown("""
-    <style>
-        /* Sidebar background */
-        section[data-testid="stSidebar"] {
-            background: linear-gradient(180deg, #1e3c72, #2a5298) !important;
-            color: white !important;
-        }
+    st.sidebar.markdown(
+        """
+        <style>
+            /* Sidebar background */
+            section[data-testid="stSidebar"] {
+                background: linear-gradient(180deg, #1e3c72, #2a5298) !important;
+                color: white !important;
+            }
 
-        /* Judul sidebar */
-        .sidebar-title {
-            color: #ffffff !important;
-            font-size: 1.6rem !important;
-            font-weight: 700 !important;
-            margin-bottom: 1.5rem !important;
-            text-align: center;
-            font-family: 'Segoe UI', sans-serif;
-        }
+            /* Judul sidebar */
+            .sidebar-title {
+                color: #ffffff !important;
+                font-size: 1.6rem !important;
+                font-weight: 700 !important;
+                margin-bottom: 1.5rem !important;
+                text-align: center;
+                font-family: 'Segoe UI', sans-serif;
+            }
 
         /* Tombol navigasi */
         section[data-testid="stSidebar"] .stButton > button {
@@ -56,22 +58,24 @@ def render_sidebar():
             border: none !important;
         }
 
-        /* Hover efek */
-        section[data-testid="stSidebar"] .stButton > button:hover {
-            background: #ffd700 !important;
-            color: #1e3c72 !important;
-            transform: scale(1.01);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.25) !important;
-        }
+            /* Hover efek */
+            section[data-testid="stSidebar"] .stButton > button:hover {
+                background: #ffd700 !important;
+                color: #1e3c72 !important;
+                transform: scale(1.01);
+                box-shadow: 0 4px 10px rgba(0,0,0,0.25) !important;
+            }
 
-        /* Active state */
-        section[data-testid="stSidebar"] .stButton > button[aria-pressed="true"] {
-            background: #ff9800 !important;
-            color: #ffffff !important;
-            font-weight: bold !important;
-        }
-    </style>
-    """, unsafe_allow_html=True)
+            /* Active state */
+            section[data-testid="stSidebar"] .stButton > button[aria-pressed="true"] {
+                background: #ff9800 !important;
+                color: #ffffff !important;
+                font-weight: bold !important;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
     st.sidebar.markdown('<div class="sidebar-title">📚 Navigation</div>', unsafe_allow_html=True)
 
