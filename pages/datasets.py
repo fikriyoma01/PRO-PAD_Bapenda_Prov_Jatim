@@ -133,6 +133,7 @@ def show_dataset_page():
         color_discrete_map={"PKB": "#1e88e5", "BBNKB": "#43a047"},
     )
     fig.update_layout(template="plotly_white", yaxis_tickformat=",.0f")
+    fig.update_yaxes(rangemode='tozero')
     st.plotly_chart(fig, use_container_width=True)
 
     # --- Visualisasi Makro
