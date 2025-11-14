@@ -325,8 +325,8 @@ def show_scenario_builder():
             zerolinecolor='black'
         ),
         template="plotly_white",
-        height=600,
-        autosize=True,
+        height=700,
+        margin=dict(l=100, r=100, t=120, b=120),
         hovermode='x',
         showlegend=False
     )
@@ -415,8 +415,8 @@ def show_scenario_builder():
                 ),
                 template="plotly_white",
                 barmode='group',
-                height=550,
-                autosize=True,
+                height=700,
+                margin=dict(l=100, r=100, t=120, b=100),
                 hovermode='x unified',
                 showlegend=True
             )

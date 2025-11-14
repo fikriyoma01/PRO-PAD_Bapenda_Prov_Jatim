@@ -233,11 +233,11 @@ def show_modeling_page():
         xaxis_title=predictor,
         yaxis_title=response,
         yaxis=dict(tickformat=",.0f"),
-        height=550,
+        height=700,
         template='plotly_white',
         hovermode='closest',
         showlegend=True,
-        autosize=True,
+        margin=dict(l=100, r=100, t=120, b=100),
         legend=dict(
             yanchor="top",
             y=0.99,
