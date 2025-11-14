@@ -301,10 +301,26 @@ def show_decision_support_page():
         fig.update_layout(
             barmode='group',
             title="Target vs Projection Comparison",
-            xaxis_title="Category",
-            yaxis_title="Amount (Trillion Rupiah)",
+            xaxis=dict(
+                title="Category",
+                tickangle=-15,
+                tickfont=dict(size=11)
+            ),
+            yaxis=dict(
+                title="Amount (Trillion Rupiah)",
+                tickformat=".2f"
+            ),
             template="plotly_white",
-            height=500
+            height=550,
+            hovermode='x unified',
+            showlegend=True,
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1
+            )
         )
 
         st.plotly_chart(fig, use_container_width=True)
@@ -522,10 +538,25 @@ def show_decision_support_page():
         fig_scenario.update_layout(
             barmode='stack',
             title="Total PAD by Scenario (2025)",
-            xaxis_title="Scenario",
-            yaxis_title="Amount (Trillion Rupiah)",
+            xaxis=dict(
+                title="Scenario",
+                tickfont=dict(size=12)
+            ),
+            yaxis=dict(
+                title="Amount (Trillion Rupiah)",
+                tickformat=".2f"
+            ),
             template="plotly_white",
-            height=500
+            height=550,
+            hovermode='x unified',
+            showlegend=True,
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1
+            )
         )
 
         st.plotly_chart(fig_scenario, use_container_width=True)

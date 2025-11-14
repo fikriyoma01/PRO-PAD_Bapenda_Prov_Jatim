@@ -118,24 +118,22 @@ def create_waterfall_chart(df_dekom: pd.DataFrame, title: str, year: int) -> go.
     # Tentukan tipe measure untuk setiap bar
     measures = []
     text_values = []
+    text_positions = []
 
     for i, (label, value) in enumerate(zip(labels, values)):
         # Format text
         if value >= 0:
-            text_values.append(f"+{value/1e9:.2f}T")
+            text_values.append(f"+Rp {abs(value)/1e9:.2f}T")
+            text_positions.append("outside")
         else:
-            text_values.append(f"{value/1e9:.2f}T")
+            text_values.append(f"-Rp {abs(value)/1e9:.2f}T")
+            text_positions.append("outside")
 
         # Tentukan measure type
-        if "TOTAL POTENSI" in label.upper():
+        label_upper = label.upper()
+        if any(keyword in label_upper for keyword in ["TOTAL POTENSI", "TARGET", "SISA"]):
             measures.append("total")
-        elif "TARGET" in label.upper():
-            measures.append("total")
-        elif "SISA" in label.upper():
-            measures.append("total")
-        elif "TOTAL PENAMBAH" in label.upper():
-            measures.append("total")
-        elif "TOTAL PENGURANG" in label.upper():
+        elif any(keyword in label_upper for keyword in ["TOTAL PENAMBAH", "TOTAL PENGURANG"]):
             measures.append("total")
         else:
             measures.append("relative")
@@ -149,25 +147,28 @@ def create_waterfall_chart(df_dekom: pd.DataFrame, title: str, year: int) -> go.
         textposition="outside",
         text=text_values,
         y=values,
-        connector={"line": {"color": "rgb(63, 63, 63)"}},
-        decreasing={"marker": {"color": "#ef5350"}},  # Red for negative
-        increasing={"marker": {"color": "#66bb6a"}},  # Green for positive
-        totals={"marker": {"color": "#42a5f5"}},  # Blue for totals
+        connector={"line": {"color": "rgb(63, 63, 63)", "width": 2}},
+        decreasing={"marker": {"color": "#ef5350", "line": {"color": "#c62828", "width": 1}}},  # Red for negative
+        increasing={"marker": {"color": "#66bb6a", "line": {"color": "#388e3c", "width": 1}}},  # Green for positive
+        totals={"marker": {"color": "#42a5f5", "line": {"color": "#1976d2", "width": 1}}},  # Blue for totals
     ))
 
     fig.update_layout(
-        title=f"{title}<br><sub>Nilai dalam Miliar Rupiah</sub>",
+        title=f"{title}<br><sub>Nilai dalam Triliun Rupiah</sub>",
         showlegend=False,
-        height=500,
+        height=600,
         xaxis=dict(
             tickangle=-45,
-            tickfont=dict(size=10)
+            tickfont=dict(size=9),
+            title="Komponen"
         ),
         yaxis=dict(
             title="Nilai (Rupiah)",
             tickformat=",.0f"
         ),
-        template="plotly_white"
+        template="plotly_white",
+        hovermode='closest',
+        margin=dict(b=150)  # Add bottom margin for rotated labels
     )
 
     return fig
@@ -279,7 +280,6 @@ def dekomposisi_bbnkb_table(
             "Roda 2 (Jan-Des 2026)",
             "Total Potensi Kendaraan Baru Tahun 2026",
             "Potensi BBN II Tidak Dipungut",
-            "Total Pengurang",
             "Potensi Neto Setelah Pengurang",
             "Dampak Makro (+)",
             "Dampak Makro (-)",
@@ -291,8 +291,7 @@ def dekomposisi_bbnkb_table(
             values.get("R4", 0.0),
             values.get("R2", 0.0),
             total,
-            pengurang,
-            pengurang,
+            -pengurang,
             neto,
             macro_plus,
             macro_minus,

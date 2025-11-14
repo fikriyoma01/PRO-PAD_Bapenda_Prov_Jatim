@@ -204,7 +204,20 @@ def show_modeling_page():
                      title=f"{response} vs {predictor}",
                      color_discrete_sequence=["#1e88e5"])
     fig.add_traces(px.line(df_sorted, x=predictor, y="pred").data)
-    fig.update_traces(textposition="top center")
+    fig.update_traces(textposition="top center", selector=dict(mode='markers+text'))
+    fig.update_traces(
+        line=dict(color='#ff6f00', width=3, dash='dash'),
+        name='Garis Regresi',
+        selector=dict(mode='lines')
+    )
+    fig.update_layout(
+        xaxis_title=predictor,
+        yaxis_title=response,
+        yaxis=dict(tickformat=",.0f"),
+        height=500,
+        hovermode='closest',
+        showlegend=True
+    )
     st.plotly_chart(fig, use_container_width=True)
 
     # ===== MODEL VALIDATION METRICS =====

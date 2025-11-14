@@ -312,11 +312,22 @@ def show_scenario_builder():
 
     fig.update_layout(
         title=f"Dampak Variabel Makro terhadap {response} {year}",
-        xaxis_title="Variabel Makroekonomi",
-        yaxis_title="Dampak (Rupiah)",
+        xaxis=dict(
+            title="Variabel Makroekonomi",
+            tickangle=-45,
+            tickfont=dict(size=10)
+        ),
+        yaxis=dict(
+            title="Dampak (Rupiah)",
+            tickformat=",.0f",
+            zeroline=True,
+            zerolinewidth=2,
+            zerolinecolor='black'
+        ),
         template="plotly_white",
-        yaxis_tickformat=",.0f",
-        height=500
+        height=550,
+        hovermode='x',
+        showlegend=False
     )
 
     st.plotly_chart(fig, use_container_width=True)
@@ -394,10 +405,18 @@ def show_scenario_builder():
 
             fig_comp.update_layout(
                 title="Comparison: Saved Scenarios",
-                yaxis_title="Projection (Rupiah)",
+                yaxis=dict(
+                    title="Projection (Rupiah)",
+                    tickformat=",.0f"
+                ),
+                xaxis=dict(
+                    title="Response Variable"
+                ),
                 template="plotly_white",
-                yaxis_tickformat=",.0f",
-                barmode='group'
+                barmode='group',
+                height=500,
+                hovermode='x unified',
+                showlegend=True
             )
 
             st.plotly_chart(fig_comp, use_container_width=True)
