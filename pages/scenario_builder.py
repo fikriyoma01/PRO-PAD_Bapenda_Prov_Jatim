@@ -325,7 +325,8 @@ def show_scenario_builder():
             zerolinecolor='black'
         ),
         template="plotly_white",
-        height=550,
+        height=600,
+        autosize=True,
         hovermode='x',
         showlegend=False
     )
@@ -414,7 +415,8 @@ def show_scenario_builder():
                 ),
                 template="plotly_white",
                 barmode='group',
-                height=500,
+                height=550,
+                autosize=True,
                 hovermode='x unified',
                 showlegend=True
             )

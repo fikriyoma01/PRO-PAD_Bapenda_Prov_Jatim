@@ -156,7 +156,8 @@ def create_waterfall_chart(df_dekom: pd.DataFrame, title: str, year: int) -> go.
     fig.update_layout(
         title=f"{title}<br><sub>Nilai dalam Triliun Rupiah</sub>",
         showlegend=False,
-        height=600,
+        height=650,
+        autosize=True,
         xaxis=dict(
             tickangle=-45,
             tickfont=dict(size=9),
@@ -168,7 +169,7 @@ def create_waterfall_chart(df_dekom: pd.DataFrame, title: str, year: int) -> go.
         ),
         template="plotly_white",
         hovermode='closest',
-        margin=dict(b=150)  # Add bottom margin for rotated labels
+        margin=dict(b=150, t=100, l=80, r=80)  # Add margins for labels
     )
 
     return fig

@@ -200,23 +200,50 @@ def show_modeling_page():
     df_sorted = df.sort_values(predictor)
     df_sorted["pred"] = model.predict(sm.add_constant(df_sorted[[predictor]]))
 
-    fig = px.scatter(df, x=predictor, y=response, text="Tahun",
-                     title=f"{response} vs {predictor}",
-                     color_discrete_sequence=["#1e88e5"])
-    fig.add_traces(px.line(df_sorted, x=predictor, y="pred").data)
-    fig.update_traces(textposition="top center", selector=dict(mode='markers+text'))
-    fig.update_traces(
-        line=dict(color='#ff6f00', width=3, dash='dash'),
+    # Create figure using go.Figure for better control
+    fig = go.Figure()
+
+    # Add scatter plot
+    fig.add_trace(go.Scatter(
+        x=df[predictor],
+        y=df[response],
+        mode='markers+text',
+        name='Data Aktual',
+        text=df["Tahun"],
+        textposition='top center',
+        marker=dict(size=10, color='#1e88e5'),
+        hovertemplate='<b>Tahun %{text}</b><br>' +
+                      f'{predictor}: %{{x:.2f}}<br>' +
+                      f'{response}: %{{y:,.0f}}<extra></extra>'
+    ))
+
+    # Add regression line
+    fig.add_trace(go.Scatter(
+        x=df_sorted[predictor],
+        y=df_sorted["pred"],
+        mode='lines',
         name='Garis Regresi',
-        selector=dict(mode='lines')
-    )
+        line=dict(color='#ff6f00', width=3, dash='dash'),
+        hovertemplate=f'{predictor}: %{{x:.2f}}<br>' +
+                      'Prediksi: %{y:,.0f}<extra></extra>'
+    ))
+
     fig.update_layout(
+        title=f"{response} vs {predictor}",
         xaxis_title=predictor,
         yaxis_title=response,
         yaxis=dict(tickformat=",.0f"),
-        height=500,
+        height=550,
+        template='plotly_white',
         hovermode='closest',
-        showlegend=True
+        showlegend=True,
+        autosize=True,
+        legend=dict(
+            yanchor="top",
+            y=0.99,
+            xanchor="left",
+            x=0.01
+        )
     )
     st.plotly_chart(fig, use_container_width=True)
 
