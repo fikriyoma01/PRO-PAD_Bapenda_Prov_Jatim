@@ -27,10 +27,14 @@ df = load_pad_historis()
 
 
 def run_regression(response: str, predictor: str):
-    X = df[[predictor]]
-    X = sm.add_constant(X)
-    y = df[response]
-    return sm.OLS(y, X).fit()
+    """
+    Run OLS regression using numpy arrays for consistent predictions
+    """
+    X = df[[predictor]].values
+    y = df[response].values
+    # Add constant using numpy to avoid DataFrame column name issues
+    X_with_const = np.column_stack([np.ones(len(X)), X])
+    return sm.OLS(y, X_with_const).fit()
 
 
 def local_css():
@@ -100,9 +104,10 @@ def show_modeling_page():
 
     # Jalankan regresi
     model = run_regression(response, predictor)
-    coef = model.params[predictor]
-    intercept = model.params["const"]
-    pval = model.pvalues[predictor]
+    # Model parameters: [0] = intercept, [1] = coefficient
+    intercept = model.params[0]
+    coef = model.params[1]
+    pval = model.pvalues[1]
     r2 = model.rsquared
 
     # Log to audit trail
