@@ -117,7 +117,7 @@ def leave_one_out_cross_validation(df: pd.DataFrame, response: str, predictor: s
 
         # Predict
         X_test = sm.add_constant(test_df[[predictor]])
-        y_pred = model.predict(X_test).values[0]
+        y_pred = model.predict(X_test)[0]  # model.predict returns numpy array, not pandas Series
         y_true = test_df[response].values[0]
 
         predictions.append(y_pred)
@@ -165,18 +165,18 @@ def backtest_model(df: pd.DataFrame, response: str, predictor: str, test_years: 
 
     # Predict on test set
     X_test = sm.add_constant(test_df[[predictor]])
-    y_pred = model.predict(X_test)
+    y_pred = model.predict(X_test)  # Returns numpy array
     y_true = test_df[response]
 
     # Calculate metrics
-    metrics = calculate_all_metrics(y_true.values, y_pred.values)
+    metrics = calculate_all_metrics(y_true.values, y_pred)  # y_pred is already numpy array
 
     return {
         'train_years': train_df['Tahun'].tolist(),
         'test_years': test_df['Tahun'].tolist(),
         'y_train': y_train.values,
         'y_test': y_true.values,
-        'y_pred': y_pred.values,
+        'y_pred': y_pred,  # Already a numpy array
         'metrics': metrics,
         'model_params': {
             'intercept': model.params['const'],
