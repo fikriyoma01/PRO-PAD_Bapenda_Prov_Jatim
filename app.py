@@ -13,6 +13,7 @@ PAGES = {
     "⚖️ Dekomposisi": "dekomposisi",
     "🧭 Insight Terpadu": "insight",
     "📘 Implementasi Skenario HKPD": "hkpd",
+    "🎯 Scenario Builder": "scenario_builder",
     "📚 Metodologi": "metodologi"
 }
 

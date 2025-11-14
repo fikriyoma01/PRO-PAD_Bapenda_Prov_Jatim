@@ -368,10 +368,182 @@ def show_decomposition_tab():
         use_container_width=True,
     )
 
-    # Highlight cepat
+    # Gauge Charts for Target Achievement
+    st.markdown("---")
+    st.subheader("🎯 Target Achievement - Gauge Visualization")
+
+    col1, col2 = st.columns(2)
+
+    # PKB 2025 Gauge
+    with col1:
+        pkb_2025_potensi = total_pkb25
+        pkb_2025_target = map_inputs(pkb_inputs_2025).get("Target", 0)
+        pkb_2025_pct = (pkb_2025_potensi / pkb_2025_target * 100) if pkb_2025_target > 0 else 0
+
+        fig_gauge_pkb25 = go.Figure(go.Indicator(
+            mode="gauge+number+delta",
+            value=pkb_2025_potensi / 1e9,  # Convert to Trillion
+            number={'suffix': "T", 'font': {'size': 40}},
+            delta={'reference': pkb_2025_target / 1e9, 'increasing': {'color': "#66bb6a"}, 'decreasing': {'color': "#ef5350"}},
+            title={'text': f"<b>PKB 2025</b><br><span style='font-size:0.8em'>Target: Rp {pkb_2025_target/1e9:.2f}T</span>", 'font': {'size': 20}},
+            gauge={
+                'axis': {'range': [None, max(pkb_2025_potensi, pkb_2025_target) / 1e9 * 1.2], 'ticksuffix': "T"},
+                'bar': {'color': "#1976d2"},
+                'bgcolor': "white",
+                'borderwidth': 2,
+                'bordercolor': "gray",
+                'steps': [
+                    {'range': [0, pkb_2025_target / 1e9 * 0.8], 'color': '#ffebee'},
+                    {'range': [pkb_2025_target / 1e9 * 0.8, pkb_2025_target / 1e9], 'color': '#fff9c4'},
+                    {'range': [pkb_2025_target / 1e9, pkb_2025_target / 1e9 * 1.2], 'color': '#e8f5e9'}
+                ],
+                'threshold': {
+                    'line': {'color': "red", 'width': 4},
+                    'thickness': 0.75,
+                    'value': pkb_2025_target / 1e9
+                }
+            }
+        ))
+
+        fig_gauge_pkb25.update_layout(height=350, margin=dict(l=20, r=20, t=80, b=20))
+        st.plotly_chart(fig_gauge_pkb25, use_container_width=True)
+
+        if pkb_2025_pct >= 100:
+            st.success(f"✅ Potensi **{pkb_2025_pct:.1f}%** dari target (Surplus: Rp {(pkb_2025_potensi-pkb_2025_target)/1e9:.2f}T)")
+        elif pkb_2025_pct >= 90:
+            st.info(f"💡 Potensi **{pkb_2025_pct:.1f}%** dari target (Deficit: Rp {(pkb_2025_target-pkb_2025_potensi)/1e9:.2f}T)")
+        else:
+            st.warning(f"⚠️ Potensi hanya **{pkb_2025_pct:.1f}%** dari target (Deficit: Rp {(pkb_2025_target-pkb_2025_potensi)/1e9:.2f}T)")
+
+    # BBNKB 2025 Gauge
+    with col2:
+        bbnkb_2025_potensi = bbn_total_2025
+        bbnkb_2025_target = bbn_vals_2025.get("Target", 0)
+        bbnkb_2025_pct = (bbnkb_2025_potensi / bbnkb_2025_target * 100) if bbnkb_2025_target > 0 else 0
+
+        fig_gauge_bbnkb25 = go.Figure(go.Indicator(
+            mode="gauge+number+delta",
+            value=bbnkb_2025_potensi / 1e9,
+            number={'suffix': "T", 'font': {'size': 40}},
+            delta={'reference': bbnkb_2025_target / 1e9, 'increasing': {'color': "#66bb6a"}, 'decreasing': {'color': "#ef5350"}},
+            title={'text': f"<b>BBNKB 2025</b><br><span style='font-size:0.8em'>Target: Rp {bbnkb_2025_target/1e9:.2f}T</span>", 'font': {'size': 20}},
+            gauge={
+                'axis': {'range': [None, max(bbnkb_2025_potensi, bbnkb_2025_target) / 1e9 * 1.2], 'ticksuffix': "T"},
+                'bar': {'color': "#388e3c"},
+                'bgcolor': "white",
+                'borderwidth': 2,
+                'bordercolor': "gray",
+                'steps': [
+                    {'range': [0, bbnkb_2025_target / 1e9 * 0.8], 'color': '#ffebee'},
+                    {'range': [bbnkb_2025_target / 1e9 * 0.8, bbnkb_2025_target / 1e9], 'color': '#fff9c4'},
+                    {'range': [bbnkb_2025_target / 1e9, bbnkb_2025_target / 1e9 * 1.2], 'color': '#e8f5e9'}
+                ],
+                'threshold': {
+                    'line': {'color': "red", 'width': 4},
+                    'thickness': 0.75,
+                    'value': bbnkb_2025_target / 1e9
+                }
+            }
+        ))
+
+        fig_gauge_bbnkb25.update_layout(height=350, margin=dict(l=20, r=20, t=80, b=20))
+        st.plotly_chart(fig_gauge_bbnkb25, use_container_width=True)
+
+        if bbnkb_2025_pct >= 100:
+            st.success(f"✅ Potensi **{bbnkb_2025_pct:.1f}%** dari target (Surplus: Rp {(bbnkb_2025_potensi-bbnkb_2025_target)/1e9:.2f}T)")
+        elif bbnkb_2025_pct >= 90:
+            st.info(f"💡 Potensi **{bbnkb_2025_pct:.1f}%** dari target (Deficit: Rp {(bbnkb_2025_target-bbnkb_2025_potensi)/1e9:.2f}T)")
+        else:
+            st.warning(f"⚠️ Potensi hanya **{bbnkb_2025_pct:.1f}%** dari target (Deficit: Rp {(bbnkb_2025_target-bbnkb_2025_potensi)/1e9:.2f}T)")
+
+    # 2026 Gauges
+    col3, col4 = st.columns(2)
+
+    # PKB 2026 Gauge
+    with col3:
+        pkb_2026_potensi = total_pkb26
+        pkb_2026_target = map_inputs(pkb_inputs_2026).get("Target", 0)
+        pkb_2026_pct = (pkb_2026_potensi / pkb_2026_target * 100) if pkb_2026_target > 0 else 0
+
+        fig_gauge_pkb26 = go.Figure(go.Indicator(
+            mode="gauge+number+delta",
+            value=pkb_2026_potensi / 1e9,
+            number={'suffix': "T", 'font': {'size': 40}},
+            delta={'reference': pkb_2026_target / 1e9, 'increasing': {'color': "#66bb6a"}, 'decreasing': {'color': "#ef5350"}},
+            title={'text': f"<b>PKB 2026</b><br><span style='font-size:0.8em'>Target: Rp {pkb_2026_target/1e9:.2f}T</span>", 'font': {'size': 20}},
+            gauge={
+                'axis': {'range': [None, max(pkb_2026_potensi, pkb_2026_target) / 1e9 * 1.2], 'ticksuffix': "T"},
+                'bar': {'color': "#1976d2"},
+                'bgcolor': "white",
+                'borderwidth': 2,
+                'bordercolor': "gray",
+                'steps': [
+                    {'range': [0, pkb_2026_target / 1e9 * 0.8], 'color': '#ffebee'},
+                    {'range': [pkb_2026_target / 1e9 * 0.8, pkb_2026_target / 1e9], 'color': '#fff9c4'},
+                    {'range': [pkb_2026_target / 1e9, pkb_2026_target / 1e9 * 1.2], 'color': '#e8f5e9'}
+                ],
+                'threshold': {
+                    'line': {'color': "red", 'width': 4},
+                    'thickness': 0.75,
+                    'value': pkb_2026_target / 1e9
+                }
+            }
+        ))
+
+        fig_gauge_pkb26.update_layout(height=350, margin=dict(l=20, r=20, t=80, b=20))
+        st.plotly_chart(fig_gauge_pkb26, use_container_width=True)
+
+        if pkb_2026_pct >= 100:
+            st.success(f"✅ Potensi **{pkb_2026_pct:.1f}%** dari target (Surplus: Rp {(pkb_2026_potensi-pkb_2026_target)/1e9:.2f}T)")
+        elif pkb_2026_pct >= 90:
+            st.info(f"💡 Potensi **{pkb_2026_pct:.1f}%** dari target (Deficit: Rp {(pkb_2026_target-pkb_2026_potensi)/1e9:.2f}T)")
+        else:
+            st.warning(f"⚠️ Potensi hanya **{pkb_2026_pct:.1f}%** dari target (Deficit: Rp {(pkb_2026_target-pkb_2026_potensi)/1e9:.2f}T)")
+
+    # BBNKB 2026 Gauge
+    with col4:
+        bbnkb_2026_potensi = bbn_total_2026
+        bbnkb_2026_target = bbn_vals_2026.get("Target", 0)
+        bbnkb_2026_pct = (bbnkb_2026_potensi / bbnkb_2026_target * 100) if bbnkb_2026_target > 0 else 0
+
+        fig_gauge_bbnkb26 = go.Figure(go.Indicator(
+            mode="gauge+number+delta",
+            value=bbnkb_2026_potensi / 1e9,
+            number={'suffix': "T", 'font': {'size': 40}},
+            delta={'reference': bbnkb_2026_target / 1e9, 'increasing': {'color': "#66bb6a"}, 'decreasing': {'color': "#ef5350"}},
+            title={'text': f"<b>BBNKB 2026</b><br><span style='font-size:0.8em'>Target: Rp {bbnkb_2026_target/1e9:.2f}T</span>", 'font': {'size': 20}},
+            gauge={
+                'axis': {'range': [None, max(bbnkb_2026_potensi, bbnkb_2026_target) / 1e9 * 1.2], 'ticksuffix': "T"},
+                'bar': {'color': "#388e3c"},
+                'bgcolor': "white",
+                'borderwidth': 2,
+                'bordercolor': "gray",
+                'steps': [
+                    {'range': [0, bbnkb_2026_target / 1e9 * 0.8], 'color': '#ffebee'},
+                    {'range': [bbnkb_2026_target / 1e9 * 0.8, bbnkb_2026_target / 1e9], 'color': '#fff9c4'},
+                    {'range': [bbnkb_2026_target / 1e9, bbnkb_2026_target / 1e9 * 1.2], 'color': '#e8f5e9'}
+                ],
+                'threshold': {
+                    'line': {'color': "red", 'width': 4},
+                    'thickness': 0.75,
+                    'value': bbnkb_2026_target / 1e9
+                }
+            }
+        ))
+
+        fig_gauge_bbnkb26.update_layout(height=350, margin=dict(l=20, r=20, t=80, b=20))
+        st.plotly_chart(fig_gauge_bbnkb26, use_container_width=True)
+
+        if bbnkb_2026_pct >= 100:
+            st.success(f"✅ Potensi **{bbnkb_2026_pct:.1f}%** dari target (Surplus: Rp {(bbnkb_2026_potensi-bbnkb_2026_target)/1e9:.2f}T)")
+        elif bbnkb_2026_pct >= 90:
+            st.info(f"💡 Potensi **{bbnkb_2026_pct:.1f}%** dari target (Deficit: Rp {(bbnkb_2026_target-bbnkb_2026_potensi)/1e9:.2f}T)")
+        else:
+            st.warning(f"⚠️ Potensi hanya **{bbnkb_2026_pct:.1f}%** dari target (Deficit: Rp {(bbnkb_2026_target-bbnkb_2026_potensi)/1e9:.2f}T)")
+
+    # Quick summary text
     for _, row in ringkas.iterrows():
         tag = "✅" if row["Sisa Potensi"] >= 0 else "⚠️"
-        st.write(f"{tag} **{row['Jenis']} {int(row['Tahun'])}**: Sisa Potensi **Rp{row['Sisa Potensi']:,.0f}**")
 
     st.markdown("---")
 
