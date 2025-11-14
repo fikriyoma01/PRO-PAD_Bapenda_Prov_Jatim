@@ -100,25 +100,28 @@ def leave_one_out_cross_validation(df: pd.DataFrame, response: str, predictor: s
     Returns:
         dict: CV results including predictions and metrics
     """
-    n = len(df)
+    # Reset index to ensure clean 0-based indexing
+    df_reset = df.reset_index(drop=True)
+    n = len(df_reset)
     predictions = []
     actuals = []
 
     for i in range(n):
-        # Split data: leave one out
-        train_mask = df.index != i
-        train_df = df[train_mask]
-        test_df = df[~train_mask]
+        # Split data: leave one out using iloc for position-based indexing
+        train_indices = [j for j in range(n) if j != i]
+        train_df = df_reset.iloc[train_indices]
+        test_df = df_reset.iloc[[i]]  # Use [[i]] to keep as DataFrame
 
         # Train model
         X_train = sm.add_constant(train_df[[predictor]])
         y_train = train_df[response]
         model = sm.OLS(y_train, X_train).fit()
 
-        # Predict
+        # Predict - ensure X_test has same structure as X_train
         X_test = sm.add_constant(test_df[[predictor]])
-        y_pred = model.predict(X_test)[0]  # model.predict returns numpy array, not pandas Series
-        y_true = test_df[response].values[0]
+        # Predict returns pandas Series when input is DataFrame
+        y_pred = model.predict(X_test).iloc[0]
+        y_true = test_df[response].iloc[0]
 
         predictions.append(y_pred)
         actuals.append(y_true)
@@ -165,18 +168,18 @@ def backtest_model(df: pd.DataFrame, response: str, predictor: str, test_years: 
 
     # Predict on test set
     X_test = sm.add_constant(test_df[[predictor]])
-    y_pred = model.predict(X_test)  # Returns numpy array
+    y_pred = model.predict(X_test)  # Returns pandas Series when input is DataFrame
     y_true = test_df[response]
 
-    # Calculate metrics
-    metrics = calculate_all_metrics(y_true.values, y_pred)  # y_pred is already numpy array
+    # Calculate metrics - convert Series to numpy arrays
+    metrics = calculate_all_metrics(y_true.values, y_pred.values)
 
     return {
         'train_years': train_df['Tahun'].tolist(),
         'test_years': test_df['Tahun'].tolist(),
         'y_train': y_train.values,
         'y_test': y_true.values,
-        'y_pred': y_pred,  # Already a numpy array
+        'y_pred': y_pred.values,  # Convert Series to numpy array
         'metrics': metrics,
         'model_params': {
             'intercept': model.params['const'],
