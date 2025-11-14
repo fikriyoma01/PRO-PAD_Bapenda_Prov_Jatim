@@ -362,8 +362,8 @@ def app():
             dtick=1
         ),
         hovermode='x unified',
-        height=550,
-        autosize=True
+        height=700,
+        margin=dict(l=80, r=80, t=100, b=80)
     )
     st.plotly_chart(fig_trend, use_container_width=True)
 
@@ -413,8 +413,8 @@ def app():
                 dtick=1
             ),
             hovermode='x unified',
-            height=550,
-            autosize=True
+            height=700,
+            margin=dict(l=80, r=80, t=100, b=80)
         )
         st.plotly_chart(fig_macro, use_container_width=True)
     else:
@@ -480,8 +480,8 @@ def app():
         yaxis_title=response,
         yaxis=dict(tickformat=",.0f"),
         hovermode='closest',
-        height=550,
-        autosize=True
+        height=700,
+        margin=dict(l=80, r=80, t=100, b=80)
     )
     st.plotly_chart(fig_model, use_container_width=True)
 
@@ -527,8 +527,8 @@ def app():
             title="Nilai (Rupiah)",
             tickformat=",.0f"
         ),
-        height=550,
-        autosize=True
+        height=700,
+        margin=dict(l=80, r=80, t=120, b=80)
     )
     st.plotly_chart(fig_contrib, use_container_width=True)
 

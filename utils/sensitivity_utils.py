@@ -177,8 +177,7 @@ def create_tornado_chart(sens_df: pd.DataFrame, response: str, variation_pct: fl
         yaxis_title="Variabel Prediktor",
         barmode='overlay',
         template='plotly_white',
-        height=max(550, len(sens_df) * 75),
-        autosize=True,
+        height=max(700, len(sens_df) * 85),
         xaxis=dict(
             tickformat=",.0f",
             zeroline=True,
@@ -186,11 +185,11 @@ def create_tornado_chart(sens_df: pd.DataFrame, response: str, variation_pct: fl
             zerolinecolor='black'
         ),
         yaxis=dict(
-            tickfont=dict(size=11)
+            tickfont=dict(size=12)
         ),
         hovermode='y unified',
         showlegend=False,
-        margin=dict(l=150, r=80, t=100, b=80)
+        margin=dict(l=180, r=100, t=120, b=100)
     )
 
     return fig
@@ -231,8 +230,7 @@ def create_elasticity_chart(sens_df: pd.DataFrame, response: str) -> go.Figure:
         xaxis_title="Variabel Prediktor",
         yaxis_title="Elasticity Coefficient",
         template='plotly_white',
-        height=550,
-        autosize=True,
+        height=700,
         yaxis=dict(
             zeroline=True,
             zerolinewidth=2,
@@ -241,11 +239,11 @@ def create_elasticity_chart(sens_df: pd.DataFrame, response: str) -> go.Figure:
         ),
         xaxis=dict(
             tickangle=-45,
-            tickfont=dict(size=11)
+            tickfont=dict(size=12)
         ),
         hovermode='x',
         showlegend=False,
-        margin=dict(l=80, r=80, t=100, b=120)
+        margin=dict(l=100, r=100, t=120, b=150)
     )
 
     return fig

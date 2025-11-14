@@ -311,8 +311,8 @@ def show_decision_support_page():
                 tickformat=".2f"
             ),
             template="plotly_white",
-            height=600,
-            autosize=True,
+            height=700,
+            margin=dict(l=100, r=100, t=120, b=100),
             hovermode='x unified',
             showlegend=True,
             legend=dict(
@@ -548,8 +548,8 @@ def show_decision_support_page():
                 tickformat=".2f"
             ),
             template="plotly_white",
-            height=600,
-            autosize=True,
+            height=700,
+            margin=dict(l=100, r=100, t=120, b=100),
             hovermode='x unified',
             showlegend=True,
             legend=dict(

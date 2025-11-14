@@ -356,8 +356,8 @@ def show_projection_page():
         ),
         template="plotly_white",
         hovermode='x unified',
-        height=650,
-        autosize=True,
+        height=750,
+        margin=dict(l=100, r=100, t=120, b=100),
         legend=dict(
             orientation="v",
             yanchor="top",
@@ -512,8 +512,8 @@ def show_projection_page():
             ),
             template="plotly_white",
             hovermode='x unified',
-            height=650,
-            autosize=True,
+            height=750,
+            margin=dict(l=100, r=100, t=120, b=100),
             showlegend=True,
             legend=dict(
                 orientation="v",
