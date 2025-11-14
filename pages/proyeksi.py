@@ -12,6 +12,11 @@ from utils.scenario_utils import (
     explain_scenario_method
 )
 from utils.audit_utils import log_projection
+from utils.ensemble_models import (
+    ensemble_forecast,
+    compare_models,
+    explain_model
+)
 
 # Data historis (2018-2024) dari layer CSV
 df = load_pad_historis()
@@ -364,6 +369,169 @@ def show_projection_page():
 
     # Catatan tambahan
     st.info("💡 **Area abu-abu** menunjukkan Confidence Interval 95%, yaitu rentang di mana nilai aktual kemungkinan besar akan berada berdasarkan model statistik.")
+
+    # --- Ensemble Models Comparison (Advanced) ---
+    st.markdown("---")
+    st.header("🔬 Advanced: Model Comparison")
+
+    with st.expander("ℹ️ Tentang Model Ensemble"):
+        st.markdown("""
+        ### 📚 Apa itu Model Ensemble?
+
+        **Model Ensemble** menggabungkan prediksi dari beberapa model berbeda untuk menghasilkan proyeksi yang lebih robust.
+
+        **Model yang tersedia:**
+        1. **OLS Regression**: Model utama yang sudah digunakan (berbasis variabel makro)
+        2. **ARIMA**: Time series model yang melihat pola historis tanpa prediktor eksternal
+        3. **Exponential Smoothing**: Model sederhana yang memberikan bobot lebih pada data terbaru
+
+        **Keuntungan Ensemble:**
+        - Mengurangi risiko dari single model bias
+        - Memberikan perspektif berbeda (time series vs regression)
+        - Rata-rata dari multiple models lebih stabil
+        - Useful untuk uncertainty assessment
+
+        **Keterbatasan dengan 7 data point:**
+        - ARIMA membutuhkan lebih banyak data untuk hasil optimal
+        - Model time series mungkin tidak reliable dengan sample kecil
+        - Gunakan sebagai **referensi tambahan**, bukan pengganti OLS
+        """)
+
+    if st.checkbox("🔍 Tampilkan Perbandingan Model Ensemble", value=False):
+        st.subheader("📊 Perbandingan Beberapa Model Forecasting")
+
+        # Run ensemble forecast
+        with st.spinner("Running multiple models..."):
+            ensemble_results = ensemble_forecast(
+                df=df,
+                response=response,
+                predictor=predictor,
+                forecast_predictor_values=[val_2025, val_2026],
+                models_to_use=['ols', 'arima', 'exp_smoothing'],
+                arima_order=(1, 1, 1),
+                forecast_steps=2
+            )
+
+        # Display comparison table
+        comparison_df = compare_models(ensemble_results)
+        st.dataframe(comparison_df, use_container_width=True, hide_index=True)
+
+        # Show detailed results for each model
+        tabs = st.tabs(["OLS Regression", "ARIMA", "Exponential Smoothing", "Ensemble Average"])
+
+        for idx, (tab, model_key) in enumerate(zip(tabs, ['ols', 'arima', 'exp_smoothing', 'ensemble'])):
+            with tab:
+                if model_key in ensemble_results:
+                    model_result = ensemble_results[model_key]
+
+                    if model_result.get('success', False):
+                        # Explanation
+                        st.markdown(explain_model(model_key))
+
+                        # Forecast values
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.metric(
+                                "Proyeksi 2025",
+                                f"Rp {model_result['forecast'][0]/1e9:.2f}T"
+                            )
+                        with col2:
+                            if len(model_result['forecast']) > 1:
+                                st.metric(
+                                    "Proyeksi 2026",
+                                    f"Rp {model_result['forecast'][1]/1e9:.2f}T"
+                                )
+
+                        # Confidence intervals
+                        st.caption(f"**95% CI 2025**: Rp {model_result['forecast_lower'][0]/1e9:.2f}T - Rp {model_result['forecast_upper'][0]/1e9:.2f}T")
+                        if len(model_result['forecast']) > 1:
+                            st.caption(f"**95% CI 2026**: Rp {model_result['forecast_lower'][1]/1e9:.2f}T - Rp {model_result['forecast_upper'][1]/1e9:.2f}T")
+
+                        # Model-specific metrics
+                        if 'aic' in model_result:
+                            st.caption(f"**AIC**: {model_result['aic']:.2f}")
+                        if 'r_squared' in model_result:
+                            st.caption(f"**R²**: {model_result['r_squared']:.3f}")
+                        if 'models_used' in model_result:
+                            st.caption(f"**Models Combined**: {', '.join([m.upper() for m in model_result['models_used']])}")
+
+                    else:
+                        st.error(f"❌ Model gagal: {model_result.get('error', 'Unknown error')}")
+                else:
+                    st.warning("Model tidak tersedia dalam hasil ensemble")
+
+        # Visualization comparing all models
+        st.subheader("📈 Visualisasi Perbandingan Model")
+
+        fig_compare = go.Figure()
+
+        # Historical data
+        fig_compare.add_trace(go.Scatter(
+            x=df["Tahun"].values,
+            y=df[response].values,
+            mode='lines+markers',
+            name='Aktual (Historis)',
+            line=dict(color='#1976d2', width=3),
+            marker=dict(size=8)
+        ))
+
+        # Add forecasts from each model
+        colors = {'ols': '#388e3c', 'arima': '#f57c00', 'exp_smoothing': '#8e24aa', 'ensemble': '#e91e63'}
+        last_year = int(df["Tahun"].max())
+        last_value = float(df.loc[df["Tahun"] == last_year, response].iloc[0])
+
+        for model_key, color in colors.items():
+            if model_key in ensemble_results and ensemble_results[model_key].get('success', False):
+                model_result = ensemble_results[model_key]
+                forecast_years = [last_year, 2025, 2026]
+                forecast_values = [last_value] + list(model_result['forecast'])
+
+                fig_compare.add_trace(go.Scatter(
+                    x=forecast_years,
+                    y=forecast_values,
+                    mode='lines+markers',
+                    name=model_result.get('model', model_key.upper()),
+                    line=dict(color=color, width=2, dash='dash'),
+                    marker=dict(size=7)
+                ))
+
+        fig_compare.update_layout(
+            title=f"Perbandingan Proyeksi {response} dari Multiple Models",
+            xaxis_title="Tahun",
+            yaxis_title=f"{response} (Miliar Rupiah)",
+            template="plotly_white",
+            hovermode='x unified',
+            height=600
+        )
+
+        st.plotly_chart(fig_compare, use_container_width=True)
+
+        # Insights
+        st.markdown("### 💡 Interpretasi")
+
+        successful_models = {k: v for k, v in ensemble_results.items()
+                           if v.get('success', False) and k != 'ensemble'}
+
+        if len(successful_models) > 1:
+            # Calculate variance across models
+            forecasts_2025 = [m['forecast'][0] for m in successful_models.values()]
+            avg_2025 = np.mean(forecasts_2025)
+            std_2025 = np.std(forecasts_2025)
+            cv_2025 = (std_2025 / avg_2025) * 100
+
+            st.info(f"""
+            📊 **Konsistensi Proyeksi 2025:**
+            - Rata-rata: Rp {avg_2025/1e9:.2f}T
+            - Standar Deviasi: Rp {std_2025/1e9:.2f}T
+            - Coefficient of Variation: {cv_2025:.1f}%
+
+            {'✅ Model cukup konsisten (CV < 10%)' if cv_2025 < 10 else '⚠️ Ada perbedaan signifikan antar model (CV > 10%)'}
+            """)
+
+            if 'ensemble' in ensemble_results:
+                st.success(f"🎯 **Rekomendasi Ensemble**: Gunakan proyeksi ensemble (Rp {ensemble_results['ensemble']['forecast'][0]/1e9:.2f}T) sebagai **best estimate** karena mengurangi bias dari single model.")
+        else:
+            st.warning("⚠️ Hanya 1 model berhasil. Ensemble tidak tersedia.")
 
 
 def app():
