@@ -27,8 +27,11 @@ PAGES = {
     "🧭 Insight Terpadu": "insight",
     "📘 Implementasi Skenario HKPD": "hkpd",
     "🎯 Scenario Builder": "scenario_builder",
+    "🎨 UI Customization": "ui_customization",
+    "📊 Variable Manager": "variable_manager",
     "⚙️ Policy Settings": "policy_settings",
     "📝 Data Editor": "data_editor",
+    "🎯 Decision Support": "decision_support",
     "📚 Metodologi": "metodologi",
     "📋 Audit Trail": "audit"
 }
