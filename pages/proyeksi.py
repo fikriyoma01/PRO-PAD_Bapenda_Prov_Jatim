@@ -347,14 +347,16 @@ def show_projection_page():
         xaxis=dict(
             title="Tahun",
             tickmode="array",
-            tickvals=list(range(2018, 2027))
+            tickvals=list(range(2018, 2027)),
+            dtick=1
         ),
         yaxis=dict(
-            title=f"{response} (Miliar Rupiah)",
-            rangemode="tozero"
+            title=f"{response} (Rupiah)",
+            tickformat=",.0f"
         ),
         template="plotly_white",
         hovermode='x unified',
+        height=600,
         legend=dict(
             orientation="v",
             yanchor="top",
@@ -497,11 +499,28 @@ def show_projection_page():
 
         fig_compare.update_layout(
             title=f"Perbandingan Proyeksi {response} dari Multiple Models",
-            xaxis_title="Tahun",
-            yaxis_title=f"{response} (Miliar Rupiah)",
+            xaxis=dict(
+                title="Tahun",
+                tickmode="array",
+                tickvals=list(range(2018, 2027)),
+                dtick=1
+            ),
+            yaxis=dict(
+                title=f"{response} (Rupiah)",
+                tickformat=",.0f"
+            ),
             template="plotly_white",
             hovermode='x unified',
-            height=600
+            height=600,
+            showlegend=True,
+            legend=dict(
+                orientation="v",
+                yanchor="top",
+                y=0.99,
+                xanchor="right",
+                x=0.99,
+                bgcolor="rgba(255, 255, 255, 0.9)"
+            )
         )
 
         st.plotly_chart(fig_compare, use_container_width=True)

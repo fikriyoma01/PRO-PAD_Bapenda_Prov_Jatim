@@ -352,7 +352,18 @@ def app():
         title="📈 PKB dan BBNKB: Aktual vs Proyeksi",
         category_orders={"Status": ["Aktual", "Proyeksi"]},
     )
-    fig_trend.update_yaxes(rangemode='tozero')
+    fig_trend.update_layout(
+        yaxis=dict(
+            tickformat=",.0f",
+            title="Nilai (Rupiah)"
+        ),
+        xaxis=dict(
+            title="Tahun",
+            dtick=1
+        ),
+        hovermode='x unified',
+        height=500
+    )
     st.plotly_chart(fig_trend, use_container_width=True)
 
     col1, col2, col3 = st.columns(3)
@@ -380,17 +391,32 @@ def app():
         default=["PDRB", "Inflasi", "Suku Bunga"],
     )
     filtered_macro = macro_series[macro_series["Variabel"].isin(selected_macros)]
-    fig_macro = px.line(
-        filtered_macro,
-        x="Tahun",
-        y="Nilai",
-        color="Variabel",
-        line_dash="Status",
-        markers=True,
-        template="plotly_white",
-        title="🌐 Pergerakan Variabel Makro 2018-2026",
-    )
-    st.plotly_chart(fig_macro, use_container_width=True)
+    if not filtered_macro.empty:
+        fig_macro = px.line(
+            filtered_macro,
+            x="Tahun",
+            y="Nilai",
+            color="Variabel",
+            line_dash="Status",
+            markers=True,
+            template="plotly_white",
+            title="🌐 Pergerakan Variabel Makro 2018-2026",
+        )
+        fig_macro.update_layout(
+            yaxis=dict(
+                title="Nilai",
+                tickformat=".2f"
+            ),
+            xaxis=dict(
+                title="Tahun",
+                dtick=1
+            ),
+            hovermode='x unified',
+            height=500
+        )
+        st.plotly_chart(fig_macro, use_container_width=True)
+    else:
+        st.warning("⚠️ Silakan pilih minimal satu variabel makro untuk ditampilkan.")
 
     render_divider()
     render_section_title("🧪 Insight Pemodelan Regresi")
@@ -442,11 +468,18 @@ def app():
             y=reg_line,
             mode="lines",
             name="📏 Regresi",
-            line=dict(color="#636EFA"),
+            line=dict(color="#636EFA", width=2, dash='dash'),
             showlegend=True,
         )
     )
-    fig_model.update_traces(textposition="top center")
+    fig_model.update_traces(textposition="top center", selector=dict(mode='markers+text'))
+    fig_model.update_layout(
+        xaxis_title=predictor,
+        yaxis_title=response,
+        yaxis=dict(tickformat=",.0f"),
+        hovermode='closest',
+        height=500
+    )
     st.plotly_chart(fig_model, use_container_width=True)
 
     col_a, col_b, col_c = st.columns(3)
@@ -481,8 +514,17 @@ def app():
         legend_title="Kategori",
         bargap=0.25,
         hovermode="x unified",
-        xaxis_title="Tahun",
-        yaxis_title="Nilai (Rp)",
+        xaxis=dict(
+            title="Tahun",
+            tickmode="linear",
+            tick0=2025,
+            dtick=1
+        ),
+        yaxis=dict(
+            title="Nilai (Rupiah)",
+            tickformat=",.0f"
+        ),
+        height=500
     )
     st.plotly_chart(fig_contrib, use_container_width=True)
 
