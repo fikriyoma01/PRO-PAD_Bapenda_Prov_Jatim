@@ -5,6 +5,7 @@ from typing import Dict
 
 import pandas as pd
 import streamlit as st
+from utils.audit_utils import log_data_load
 
 DATA_DIR = Path(__file__).resolve().parent / "datasets"
 
@@ -22,6 +23,17 @@ def load_pad_historis() -> pd.DataFrame:
     df = df.rename(columns={"Rasio_Gini": "Rasio Gini"})
     df = df.rename(columns={"BI7DRR": "Suku Bunga"})
     df["Tahun"] = df["Tahun"].astype(int)
+
+    # Log data load (only once per cache refresh)
+    log_data_load(
+        source="pad_historis.csv",
+        records=len(df),
+        details={
+            'columns': list(df.columns),
+            'year_range': f"{df['Tahun'].min()}-{df['Tahun'].max()}"
+        }
+    )
+
     return df
 
 

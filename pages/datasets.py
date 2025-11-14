@@ -1,5 +1,6 @@
 import streamlit as st
 import plotly.express as px
+import plotly.graph_objects as go
 
 from data_loader import load_pad_historis
 
@@ -153,6 +154,113 @@ def show_dataset_page():
     fig2.update_traces(texttemplate="%{text:.2f}", textposition="outside")
     fig2.update_layout(template="plotly_white", yaxis_title=selected)
     st.plotly_chart(fig2, use_container_width=True)
+
+    # --- Correlation Heatmap
+    st.markdown("---")
+    st.subheader("🔥 Correlation Heatmap - Analisis Hubungan Antar Variabel")
+
+    with st.expander("ℹ️ Apa itu Correlation Heatmap?", expanded=False):
+        st.markdown("""
+        **Correlation Heatmap** menunjukkan seberapa kuat hubungan antar variabel dalam dataset.
+
+        **Cara Membaca:**
+        - **+1.0** (Merah Gelap): Korelasi positif sempurna - kedua variabel bergerak searah
+        - **0.0** (Putih): Tidak ada korelasi linear
+        - **-1.0** (Biru Gelap): Korelasi negatif sempurna - kedua variabel bergerak berlawanan arah
+
+        **Contoh Interpretasi:**
+        - Jika PKB dan PDRB memiliki korelasi +0.85, artinya ketika PDRB naik, PKB cenderung naik juga
+        - Jika BBNKB dan TPT memiliki korelasi -0.60, artinya ketika TPT naik, BBNKB cenderung turun
+
+        **Multicollinearity Warning**: Jika dua variabel makro memiliki korelasi > 0.8 atau < -0.8,
+        ini menunjukkan multicollinearity yang dapat menyebabkan model regresi tidak stabil.
+        """)
+
+    # Pilih variabel untuk correlation analysis
+    all_vars = ["PKB", "BBNKB"] + macro_vars
+    corr_df = df[all_vars].corr()
+
+    # Create heatmap
+    fig_corr = go.Figure(data=go.Heatmap(
+        z=corr_df.values,
+        x=corr_df.columns,
+        y=corr_df.columns,
+        colorscale='RdBu_r',  # Red-White-Blue reversed
+        zmid=0,  # Center at 0
+        text=corr_df.values,
+        texttemplate='%{text:.2f}',
+        textfont={"size": 10},
+        colorbar=dict(
+            title="Korelasi",
+            tickvals=[-1, -0.5, 0, 0.5, 1],
+            ticktext=['-1.0<br>Negatif<br>Kuat', '-0.5', '0.0<br>Tidak ada', '+0.5', '+1.0<br>Positif<br>Kuat']
+        ),
+        hoverongaps=False,
+        hovertemplate='%{y} vs %{x}<br>Korelasi: %{z:.3f}<extra></extra>'
+    ))
+
+    fig_corr.update_layout(
+        title="Correlation Matrix: PKB, BBNKB & Variabel Makroekonomi<br><sub>Dataset 2018-2024 (n=7 tahun)</sub>",
+        xaxis=dict(
+            tickangle=-45,
+            side='bottom',
+            tickfont=dict(size=10)
+        ),
+        yaxis=dict(
+            tickfont=dict(size=10)
+        ),
+        width=800,
+        height=700,
+        template="plotly_white"
+    )
+
+    st.plotly_chart(fig_corr, use_container_width=True)
+
+    # Highlight strong correlations
+    st.subheader("🔍 Temuan Korelasi Signifikan")
+
+    # Find strong correlations with PKB and BBNKB
+    pkb_corr = corr_df['PKB'].drop('PKB').sort_values(ascending=False)
+    bbnkb_corr = corr_df['BBNKB'].drop('BBNKB').sort_values(ascending=False)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("**📊 Korelasi dengan PKB:**")
+        for var, corr_val in pkb_corr.items():
+            if var != 'BBNKB':  # Skip BBNKB
+                emoji = "🔴" if corr_val > 0.5 else "🔵" if corr_val < -0.5 else "⚪"
+                strength = "Kuat" if abs(corr_val) > 0.7 else "Sedang" if abs(corr_val) > 0.4 else "Lemah"
+                direction = "positif" if corr_val > 0 else "negatif"
+                st.write(f"{emoji} **{var}**: {corr_val:.3f} ({strength} {direction})")
+
+    with col2:
+        st.markdown("**📊 Korelasi dengan BBNKB:**")
+        for var, corr_val in bbnkb_corr.items():
+            if var != 'PKB':  # Skip PKB
+                emoji = "🔴" if corr_val > 0.5 else "🔵" if corr_val < -0.5 else "⚪"
+                strength = "Kuat" if abs(corr_val) > 0.7 else "Sedang" if abs(corr_val) > 0.4 else "Lemah"
+                direction = "positif" if corr_val > 0 else "negatif"
+                st.write(f"{emoji} **{var}**: {corr_val:.3f} ({strength} {direction})")
+
+    # Multicollinearity warning
+    st.markdown("---")
+    st.markdown("**⚠️ Multicollinearity Check (Variabel Makro)**")
+
+    high_corr_pairs = []
+    for i in range(len(macro_vars)):
+        for j in range(i+1, len(macro_vars)):
+            corr_value = corr_df.loc[macro_vars[i], macro_vars[j]]
+            if abs(corr_value) > 0.7:
+                high_corr_pairs.append((macro_vars[i], macro_vars[j], corr_value))
+
+    if high_corr_pairs:
+        st.warning("🚨 **Multicollinearity Detected!** Pasangan variabel berikut memiliki korelasi tinggi (>0.7):")
+        for var1, var2, corr_val in high_corr_pairs:
+            st.write(f"- **{var1}** ↔ **{var2}**: {corr_val:.3f}")
+        st.caption("⚡ High multicollinearity dapat menyebabkan koefisien regresi tidak stabil. Pertimbangkan untuk tidak menggunakan kedua variabel bersamaan dalam model yang sama.")
+    else:
+        st.success("✅ Tidak ada multicollinearity yang signifikan terdeteksi (threshold: 0.7)")
 
 
 def app():
