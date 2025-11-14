@@ -1,8 +1,17 @@
 import streamlit as st
 import statsmodels.api as sm
 import plotly.express as px
+import plotly.graph_objects as go
+import pandas as pd
 
 from data_loader import load_pad_historis
+from utils.validation_utils import (
+    calculate_all_metrics,
+    leave_one_out_cross_validation,
+    backtest_model,
+    interpret_mape,
+    interpret_r2
+)
 
 # Data historis dari layer CSV
 df = load_pad_historis()
@@ -177,6 +186,205 @@ def show_modeling_page():
     fig.add_traces(px.line(df_sorted, x=predictor, y="pred").data)
     fig.update_traces(textposition="top center")
     st.plotly_chart(fig, use_container_width=True)
+
+    # ===== MODEL VALIDATION METRICS =====
+    st.markdown("---")
+    st.header("✅ Validasi Model & Performance Metrics")
+
+    st.markdown("""
+    Bagian ini menampilkan metrik validasi untuk mengevaluasi kualitas prediksi model.
+    Dengan dataset kecil (n=7), metrik ini membantu memahami ketidakpastian model.
+    """)
+
+    # Calculate fitted values and residuals
+    y_fitted = model.predict(sm.add_constant(df[[predictor]]))
+    y_actual = df[response].values
+
+    # Training metrics
+    train_metrics = calculate_all_metrics(y_actual, y_fitted.values)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.subheader("📊 Training Metrics")
+        st.markdown("""
+        Metrik pada data yang digunakan untuk melatih model:
+        """)
+
+        # Display metrics
+        metrics_df = pd.DataFrame({
+            'Metric': list(train_metrics.keys()),
+            'Value': [f"{v:,.2f}" for v in train_metrics.values()]
+        })
+        st.dataframe(metrics_df, use_container_width=True, hide_index=True)
+
+        # Interpretations
+        r2_cat, r2_desc = interpret_r2(train_metrics['R²'])
+        mape_cat, mape_desc = interpret_mape(train_metrics['MAPE (%)'])
+
+        st.info(f"""
+        **R² Interpretation**: {r2_cat}
+        {r2_desc}
+
+        **MAPE Interpretation**: {mape_cat}
+        {mape_desc}
+        """)
+
+        # Explanation
+        with st.expander("ℹ️ Penjelasan Metrics"):
+            st.markdown("""
+            **RMSE (Root Mean Squared Error)**:
+            - Rata-rata error dalam satuan asli (Rupiah)
+            - Semakin kecil semakin baik
+            - Sensitif terhadap outlier
+
+            **MAE (Mean Absolute Error)**:
+            - Rata-rata error absolut
+            - Lebih robust terhadap outlier dibanding RMSE
+            - Interpretasi lebih mudah
+
+            **MAPE (Mean Absolute Percentage Error)**:
+            - Error dalam bentuk persentase
+            - Mudah dipahami (5% = error 5%)
+            - < 10% = sangat baik, < 20% = baik
+
+            **R² (Coefficient of Determination)**:
+            - Proporsi variasi yang dijelaskan (0-1)
+            - 0.7-1.0 = kuat, 0.4-0.7 = sedang, <0.4 = lemah
+            """)
+
+    with col2:
+        st.subheader("🔄 Cross-Validation (LOOCV)")
+        st.markdown("""
+        Leave-One-Out Cross-Validation: Melatih model n kali,
+        setiap kali meninggalkan 1 observasi untuk testing.
+        """)
+
+        # Perform LOOCV
+        with st.spinner("Running cross-validation..."):
+            cv_results = leave_one_out_cross_validation(df, response, predictor)
+
+        # Display CV metrics
+        cv_metrics_df = pd.DataFrame({
+            'Metric': list(cv_results['metrics'].keys()),
+            'Value': [f"{v:,.2f}" for v in cv_results['metrics'].values()]
+        })
+        st.dataframe(cv_metrics_df, use_container_width=True, hide_index=True)
+
+        # Comparison
+        improvement = ((train_metrics['MAPE (%)'] - cv_results['metrics']['MAPE (%)']) /
+                      train_metrics['MAPE (%)'] * 100)
+
+        if abs(improvement) < 10:
+            st.success(f"✅ Model stabil! CV MAPE hanya berbeda {abs(improvement):.1f}% dari training.")
+        elif improvement > 0:
+            st.warning(f"⚠️ Model sedikit overfit. CV MAPE lebih buruk {abs(improvement):.1f}%.")
+        else:
+            st.info(f"💡 CV MAPE lebih baik {abs(improvement):.1f}%, kemungkinan kebetulan.")
+
+    # ===== BACKTESTING =====
+    st.markdown("---")
+    st.subheader("⏮️ Backtesting: Train on Past, Test on Recent")
+
+    st.markdown("""
+    Backtesting melatih model pada data lama (2018-2022) dan menguji pada data baru (2023-2024).
+    Ini mensimulasikan performa model jika digunakan untuk prediksi real-time.
+    """)
+
+    # Perform backtesting
+    with st.spinner("Running backtest..."):
+        backtest_results = backtest_model(df, response, predictor, test_years=2)
+
+    col1, col2 = st.columns([2, 1])
+
+    with col1:
+        # Backtest visualization
+        fig_backtest = go.Figure()
+
+        # Actual values
+        fig_backtest.add_trace(go.Scatter(
+            x=backtest_results['test_years'],
+            y=backtest_results['y_test'],
+            mode='lines+markers',
+            name='Actual (Test Set)',
+            line=dict(color='#1976d2', width=3),
+            marker=dict(size=10)
+        ))
+
+        # Predicted values
+        fig_backtest.add_trace(go.Scatter(
+            x=backtest_results['test_years'],
+            y=backtest_results['y_pred'],
+            mode='lines+markers',
+            name='Predicted',
+            line=dict(color='#f57c00', width=3, dash='dash'),
+            marker=dict(size=10, symbol='diamond')
+        ))
+
+        fig_backtest.update_layout(
+            title=f"Backtest: {response} Actual vs Predicted (2023-2024)",
+            xaxis_title="Tahun",
+            yaxis_title=f"{response} (Rupiah)",
+            template="plotly_white",
+            hovermode='x unified',
+            yaxis_tickformat=",.0f"
+        )
+
+        st.plotly_chart(fig_backtest, use_container_width=True)
+
+    with col2:
+        st.markdown("**Backtest Metrics:**")
+        backtest_metrics_df = pd.DataFrame({
+            'Metric': list(backtest_results['metrics'].keys()),
+            'Value': [f"{v:,.2f}" for v in backtest_results['metrics'].values()]
+        })
+        st.dataframe(backtest_metrics_df, use_container_width=True, hide_index=True)
+
+        st.markdown("**Model Parameters:**")
+        params_df = pd.DataFrame({
+            'Parameter': ['Intercept', 'Coefficient', 'R²', 'p-value'],
+            'Value': [
+                f"{backtest_results['model_params']['intercept']:,.2f}",
+                f"{backtest_results['model_params']['coefficient']:,.2f}",
+                f"{backtest_results['model_params']['r2']:.3f}",
+                f"{backtest_results['model_params']['p_value']:.3f}"
+            ]
+        })
+        st.dataframe(params_df, use_container_width=True, hide_index=True)
+
+    # Comparison table
+    st.markdown("**📋 Perbandingan: Training vs CV vs Backtest**")
+
+    comparison_df = pd.DataFrame({
+        'Metric': ['RMSE', 'MAE', 'MAPE (%)', 'R²'],
+        'Training': [
+            f"{train_metrics['RMSE']:,.0f}",
+            f"{train_metrics['MAE']:,.0f}",
+            f"{train_metrics['MAPE (%)']:.2f}",
+            f"{train_metrics['R²']:.3f}"
+        ],
+        'Cross-Val (LOOCV)': [
+            f"{cv_results['metrics']['RMSE']:,.0f}",
+            f"{cv_results['metrics']['MAE']:,.0f}",
+            f"{cv_results['metrics']['MAPE (%)']:.2f}",
+            f"{cv_results['metrics']['R²']:.3f}"
+        ],
+        'Backtest (2023-24)': [
+            f"{backtest_results['metrics']['RMSE']:,.0f}",
+            f"{backtest_results['metrics']['MAE']:,.0f}",
+            f"{backtest_results['metrics']['MAPE (%)']:.2f}",
+            f"{backtest_results['metrics']['R²']:.3f}"
+        ]
+    })
+
+    st.dataframe(comparison_df, use_container_width=True, hide_index=True)
+
+    st.warning("""
+    ⚠️ **Catatan Penting**:
+    Dengan hanya 7 observasi, metrik validasi memiliki **variance tinggi** dan **reliability rendah**.
+    Hasil backtest hanya menggunakan 2 data point untuk testing, sehingga hasilnya sangat sensitif terhadap nilai-nilai tersebut.
+    Gunakan metrik ini sebagai **indikator**, bukan **bukti definitif** kualitas model.
+    """)
 
 
 def app():

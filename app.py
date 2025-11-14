@@ -12,7 +12,8 @@ PAGES = {
     "📈 Proyeksi": "proyeksi",
     "⚖️ Dekomposisi": "dekomposisi",
     "🧭 Insight Terpadu": "insight",
-    "📘 Implementasi Skenario HKPD": "hkpd"
+    "📘 Implementasi Skenario HKPD": "hkpd",
+    "📚 Metodologi": "metodologi"
 }
 
 # --- Inisialisasi session state
