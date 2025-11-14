@@ -101,7 +101,7 @@ def leave_one_out_cross_validation(df: pd.DataFrame, response: str, predictor: s
         dict: CV results including predictions and metrics
     """
     # Reset index to ensure clean 0-based indexing
-    df_reset = df.reset_index(drop=True)
+    df_reset = df.reset_index(drop=True).copy()
     n = len(df_reset)
     predictions = []
     actuals = []
@@ -109,21 +109,25 @@ def leave_one_out_cross_validation(df: pd.DataFrame, response: str, predictor: s
     for i in range(n):
         # Split data: leave one out using iloc for position-based indexing
         train_indices = [j for j in range(n) if j != i]
-        train_df = df_reset.iloc[train_indices]
-        test_df = df_reset.iloc[[i]]  # Use [[i]] to keep as DataFrame
+        train_df = df_reset.iloc[train_indices].copy()
+        test_df = df_reset.iloc[[i]].copy()
 
-        # Train model
-        X_train = sm.add_constant(train_df[[predictor]])
-        y_train = train_df[response]
-        model = sm.OLS(y_train, X_train).fit()
+        # Prepare training data
+        X_train = train_df[[predictor]].values
+        y_train = train_df[response].values
 
-        # Predict - manually construct X_test to ensure exact column alignment
-        X_test = sm.add_constant(test_df[[predictor]])
-        # Ensure X_test has same columns in same order as X_train
-        X_test = X_test[X_train.columns]
+        # Add constant manually to have full control
+        X_train_with_const = np.column_stack([np.ones(len(X_train)), X_train])
 
-        # Predict returns pandas Series when input is DataFrame
-        y_pred = model.predict(X_test).iloc[0]
+        # Train model with numpy arrays
+        model = sm.OLS(y_train, X_train_with_const).fit()
+
+        # Prepare test data with same structure
+        X_test = test_df[[predictor]].values
+        X_test_with_const = np.column_stack([np.ones(len(X_test)), X_test])
+
+        # Predict using numpy arrays
+        y_pred = model.predict(X_test_with_const)[0]
         y_true = test_df[response].iloc[0]
 
         predictions.append(y_pred)
@@ -157,40 +161,46 @@ def backtest_model(df: pd.DataFrame, response: str, predictor: str, test_years: 
         dict: Backtest results
     """
     # Sort by year
-    df_sorted = df.sort_values('Tahun').reset_index(drop=True)
+    df_sorted = df.sort_values('Tahun').reset_index(drop=True).copy()
 
     # Split data
     train_size = len(df_sorted) - test_years
-    train_df = df_sorted.iloc[:train_size]
-    test_df = df_sorted.iloc[train_size:]
+    train_df = df_sorted.iloc[:train_size].copy()
+    test_df = df_sorted.iloc[train_size:].copy()
 
-    # Train model
-    X_train = sm.add_constant(train_df[[predictor]])
-    y_train = train_df[response]
-    model = sm.OLS(y_train, X_train).fit()
+    # Prepare training data
+    X_train = train_df[[predictor]].values
+    y_train = train_df[response].values
 
-    # Predict on test set
-    X_test = sm.add_constant(test_df[[predictor]])
-    # Ensure X_test has same columns in same order as X_train
-    X_test = X_test[X_train.columns]
-    y_pred = model.predict(X_test)  # Returns pandas Series when input is DataFrame
-    y_true = test_df[response]
+    # Add constant manually to have full control
+    X_train_with_const = np.column_stack([np.ones(len(X_train)), X_train])
 
-    # Calculate metrics - convert Series to numpy arrays
-    metrics = calculate_all_metrics(y_true.values, y_pred.values)
+    # Train model with numpy arrays
+    model = sm.OLS(y_train, X_train_with_const).fit()
+
+    # Prepare test data with same structure
+    X_test = test_df[[predictor]].values
+    X_test_with_const = np.column_stack([np.ones(len(X_test)), X_test])
+
+    # Predict using numpy arrays
+    y_pred = model.predict(X_test_with_const)
+    y_true = test_df[response].values
+
+    # Calculate metrics
+    metrics = calculate_all_metrics(y_true, y_pred)
 
     return {
         'train_years': train_df['Tahun'].tolist(),
         'test_years': test_df['Tahun'].tolist(),
-        'y_train': y_train.values,
-        'y_test': y_true.values,
-        'y_pred': y_pred.values,  # Convert Series to numpy array
+        'y_train': y_train,
+        'y_test': y_true,
+        'y_pred': y_pred,
         'metrics': metrics,
         'model_params': {
-            'intercept': model.params['const'],
-            'coefficient': model.params[predictor],
+            'intercept': model.params[0],  # First parameter is intercept
+            'coefficient': model.params[1],  # Second parameter is predictor coefficient
             'r2': model.rsquared,
-            'p_value': model.pvalues[predictor]
+            'p_value': model.pvalues[1]  # p-value for predictor
         }
     }
 
