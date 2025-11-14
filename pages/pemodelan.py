@@ -12,6 +12,13 @@ from utils.validation_utils import (
     interpret_mape,
     interpret_r2
 )
+from utils.sensitivity_utils import (
+    calculate_sensitivity_all_vars,
+    create_tornado_chart,
+    create_elasticity_chart,
+    interpret_sensitivity,
+    format_sensitivity_table
+)
 
 # Data historis dari layer CSV
 df = load_pad_historis()
@@ -384,6 +391,98 @@ def show_modeling_page():
     Dengan hanya 7 observasi, metrik validasi memiliki **variance tinggi** dan **reliability rendah**.
     Hasil backtest hanya menggunakan 2 data point untuk testing, sehingga hasilnya sangat sensitif terhadap nilai-nilai tersebut.
     Gunakan metrik ini sebagai **indikator**, bukan **bukti definitif** kualitas model.
+    """)
+
+    # --- Sensitivity Analysis Section ---
+    st.markdown("---")
+    st.header("🔬 Sensitivity Analysis")
+
+    st.markdown("""
+    **Sensitivity Analysis** menunjukkan seberapa sensitif proyeksi terhadap perubahan pada variabel prediktor.
+    Analisis ini membantu mengidentifikasi variabel mana yang memiliki dampak terbesar terhadap proyeksi PAD.
+    """)
+
+    with st.expander("ℹ️ Tentang Sensitivity Analysis"):
+        st.markdown("""
+        ### 📚 Apa itu Sensitivity Analysis?
+
+        Sensitivity analysis mengukur bagaimana perubahan pada variabel input (prediktor) mempengaruhi output (proyeksi PAD).
+
+        **Metrik yang digunakan:**
+
+        1. **Dampak (Impact)**: Perubahan absolut dalam proyeksi PAD ketika prediktor berubah ±10%
+        2. **Range**: Total rentang perubahan (upper impact - lower impact)
+        3. **Elastisitas**: Rasio perubahan % output terhadap perubahan % input
+           - Elastisitas > 1: Variabel **elastis** (sangat sensitif)
+           - Elastisitas < 1: Variabel **inelastis** (kurang sensitif)
+
+        **Tornado Chart** menampilkan hasil secara visual, dengan variabel paling berpengaruh di bagian atas.
+
+        **Kegunaan:**
+        - Identifikasi variabel kunci yang perlu dimonitor
+        - Prioritas pengumpulan data dan forecasting
+        - Risk assessment: variabel mana yang paling berisiko jika salah prediksi
+        """)
+
+    # Calculate sensitivity for all macro variables
+    macro_vars = ["PDRB", "Rasio Gini", "IPM", "TPT", "Kemiskinan", "Inflasi", "Suku Bunga"]
+
+    # Get base values (2024 data - last row)
+    base_values = {var: float(df.iloc[-1][var]) for var in macro_vars}
+
+    st.subheader("🎯 Sensitivity Analysis Results")
+
+    # Perform sensitivity analysis
+    with st.spinner("Calculating sensitivity for all variables..."):
+        sens_df = calculate_sensitivity_all_vars(
+            df=df,
+            response=response,
+            predictors=macro_vars,
+            base_values=base_values,
+            variation_pct=0.1  # ±10%
+        )
+
+    # Display interpretation
+    interpretation = interpret_sensitivity(sens_df)
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.info(f"📊 {interpretation['most_impactful']}")
+    with col2:
+        st.info(f"📉 {interpretation['least_impactful']}")
+
+    st.caption(f"✨ {interpretation['high_elasticity']}")
+    st.caption(f"🔒 {interpretation['low_elasticity']}")
+
+    # Display detailed table
+    st.subheader("📋 Tabel Detail Sensitivity")
+    formatted_table = format_sensitivity_table(sens_df)
+    st.dataframe(formatted_table, use_container_width=True, hide_index=True)
+
+    # Tornado chart
+    st.subheader("🌪️ Tornado Chart")
+    tornado_fig = create_tornado_chart(sens_df, response, variation_pct=0.1)
+    st.plotly_chart(tornado_fig, use_container_width=True)
+
+    st.markdown("""
+    💡 **Cara membaca Tornado Chart:**
+    - Semakin panjang bar, semakin besar dampak variabel tersebut
+    - Variabel di bagian atas = paling berpengaruh
+    - Merah (kiri) = dampak jika variabel turun 10%
+    - Hijau (kanan) = dampak jika variabel naik 10%
+    """)
+
+    # Elasticity chart
+    st.subheader("📊 Elasticity Coefficients")
+    elasticity_fig = create_elasticity_chart(sens_df, response)
+    st.plotly_chart(elasticity_fig, use_container_width=True)
+
+    st.markdown("""
+    💡 **Interpretasi Elasticity:**
+    - **Elastisitas > 1**: Revenue sangat responsif terhadap perubahan variabel (elastis)
+    - **Elastisitas ≈ 1**: Perubahan proporsional (unitary elastic)
+    - **Elastisitas < 1**: Revenue kurang responsif (inelastis)
+    - **Elastisitas negatif**: Hubungan terbalik (revenue turun jika variabel naik)
     """)
 
 

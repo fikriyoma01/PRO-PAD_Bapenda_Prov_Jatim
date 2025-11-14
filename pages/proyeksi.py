@@ -6,6 +6,11 @@ import plotly.graph_objects as go
 import numpy as np
 
 from data_loader import load_pad_historis
+from utils.scenario_utils import (
+    calculate_ensemble_scenario_bounds,
+    format_scenario_comparison,
+    explain_scenario_method
+)
 
 # Data historis (2018-2024) dari layer CSV
 df = load_pad_historis()
@@ -85,6 +90,28 @@ def show_projection_page():
     pred_2025 = trend_model.predict([1, 2025])[0]
     pred_2026 = trend_model.predict([1, 2026])[0]
 
+    # --- Scenario Method Selection
+    st.subheader("⚙️ Konfigurasi Skenario")
+
+    scenario_method = st.radio(
+        "Metode Perhitungan Skenario",
+        ["Traditional (±5%)", "Data-Driven (Recommended)"],
+        help="Traditional menggunakan ±5% fixed, Data-Driven menggunakan historical volatility & CI"
+    )
+
+    if scenario_method == "Data-Driven (Recommended)":
+        with st.expander("ℹ️ Tentang Data-Driven Scenarios"):
+            st.markdown("""
+            **Data-Driven Scenarios** menghitung bounds berdasarkan:
+            1. **Historical Volatility**: Standar deviasi dari returns historis
+            2. **Confidence Intervals**: Prediction intervals dari model regresi
+            3. **Percentiles**: Distribusi empiris dari growth rates
+
+            **Ensemble Method** (default) mengambil rata-rata dari 3 metode di atas untuk hasil yang lebih robust.
+
+            **Keuntungan**: Bounds mencerminkan ketidakpastian aktual dalam data, bukan arbitrary ±5%
+            """)
+
     # --- Input nilai makro (default dari prediksi, tapi bisa diubah manual)
     st.subheader("📥 Input Proyeksi Variabel Makro")
     val_2025 = st.number_input(f"{predictor} Tahun 2025", value=float(pred_2025))
@@ -96,6 +123,7 @@ def show_projection_page():
     # --- Prediksi 2025 & 2026 untuk respon dengan confidence intervals
     proj = {}
     ci_data = {}  # Untuk menyimpan confidence intervals
+    all_scenario_methods = {}  # Untuk perbandingan metode
 
     for tahun, val in zip([2025, 2026], [val_2025, val_2026]):
         # Prediksi nilai
@@ -106,17 +134,42 @@ def show_projection_page():
         pred_summary = model.get_prediction(pred_input)
         ci = pred_summary.conf_int(alpha=0.05)[0]  # 95% CI
 
-        proj[tahun] = {
-            "Pesimis (Batas Atas)": pred * 1.05,
-            "Moderat (Rata-rata)": pred,
-            "Optimis (Batas Bawah)": pred * 0.95
-        }
-
         ci_data[tahun] = {
             "lower": ci[0],
             "upper": ci[1],
             "mean": pred
         }
+
+        # Pilih metode skenario berdasarkan user input
+        if scenario_method == "Data-Driven (Recommended)":
+            # Hitung ensemble scenario bounds
+            scenarios = calculate_ensemble_scenario_bounds(
+                df=df,
+                model=model,
+                response=response,
+                X_pred=pred_input,
+                prediction=pred,
+                method='average'
+            )
+
+            # Gunakan ensemble method
+            opt, mod, pes = scenarios['ensemble']
+
+            # Simpan semua metode untuk perbandingan
+            all_scenario_methods[tahun] = scenarios
+
+            proj[tahun] = {
+                "Optimis (Batas Atas)": opt,
+                "Moderat (Rata-rata)": mod,
+                "Pesimis (Batas Bawah)": pes
+            }
+        else:
+            # Traditional ±5%
+            proj[tahun] = {
+                "Optimis (Batas Atas)": pred * 1.05,
+                "Moderat (Rata-rata)": pred,
+                "Pesimis (Batas Bawah)": pred * 0.95
+            }
 
     # --- Tabel hasil proyeksi
     st.subheader("📊 Hasil Proyeksi")
@@ -144,9 +197,44 @@ def show_projection_page():
         interval CI cenderung lebih lebar dibanding jika kita memiliki lebih banyak data historis.
 
         **Catatan**: CI berbeda dengan skenario Optimis/Moderat/Pesimis. CI dihitung berdasarkan statistik model,
-        sedangkan skenario menggunakan perkalian ±5% dari prediksi tengah.
+        sedangkan skenario dapat dihitung dengan metode Traditional (±5%) atau Data-Driven (berbasis volatilitas historis).
         """)
 
+    # --- Perbandingan Metode Skenario (untuk Data-Driven)
+    if scenario_method == "Data-Driven (Recommended)" and all_scenario_methods:
+        st.markdown("---")
+        st.subheader("🔬 Perbandingan Metode Perhitungan Skenario")
+
+        # Pilih tahun untuk ditampilkan
+        compare_year = st.selectbox(
+            "Pilih tahun untuk perbandingan detail:",
+            [2025, 2026],
+            key="compare_year_scenarios"
+        )
+
+        scenarios = all_scenario_methods[compare_year]
+
+        # Format comparison table
+        comparison_df = format_scenario_comparison(scenarios)
+        st.dataframe(comparison_df, use_container_width=True, hide_index=True)
+
+        # Penjelasan metode yang dipilih
+        tabs = st.tabs(["Volatility", "Confidence Interval", "Percentile", "Ensemble"])
+
+        with tabs[0]:
+            st.markdown(explain_scenario_method('volatility'))
+
+        with tabs[1]:
+            st.markdown(explain_scenario_method('confidence_interval'))
+
+        with tabs[2]:
+            st.markdown(explain_scenario_method('percentile'))
+
+        with tabs[3]:
+            st.markdown(explain_scenario_method('ensemble'))
+
+        # Recommendation
+        st.info("💡 **Rekomendasi**: Metode **Ensemble** digunakan secara default karena menggabungkan kekuatan dari ketiga metode dan lebih robust terhadap outliers.")
 
     # --- Visualisasi dengan Confidence Intervals
     st.subheader("📈 Visualisasi Proyeksi dengan Confidence Intervals")
@@ -211,24 +299,24 @@ def show_projection_page():
         marker=dict(size=8, symbol='diamond')
     ))
 
-    # Optimis
-    optimis_values = [last_value, proj[2025]["Optimis (Batas Bawah)"], proj[2026]["Optimis (Batas Bawah)"]]
+    # Optimis (Batas Atas = nilai lebih tinggi)
+    optimis_values = [last_value, proj[2025]["Optimis (Batas Atas)"], proj[2026]["Optimis (Batas Atas)"]]
     fig.add_trace(go.Scatter(
         x=proj_years,
         y=optimis_values,
         mode='lines+markers',
-        name='Optimis (Batas Bawah)',
+        name='Optimis (Batas Atas)',
         line=dict(color='#4caf50', width=2, dash='dot'),
         marker=dict(size=7)
     ))
 
-    # Pesimis
-    pesimis_values = [last_value, proj[2025]["Pesimis (Batas Atas)"], proj[2026]["Pesimis (Batas Atas)"]]
+    # Pesimis (Batas Bawah = nilai lebih rendah)
+    pesimis_values = [last_value, proj[2025]["Pesimis (Batas Bawah)"], proj[2026]["Pesimis (Batas Bawah)"]]
     fig.add_trace(go.Scatter(
         x=proj_years,
         y=pesimis_values,
         mode='lines+markers',
-        name='Pesimis (Batas Atas)',
+        name='Pesimis (Batas Bawah)',
         line=dict(color='#f57c00', width=2, dash='dot'),
         marker=dict(size=7)
     ))
