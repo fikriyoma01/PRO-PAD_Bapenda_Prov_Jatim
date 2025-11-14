@@ -117,8 +117,11 @@ def leave_one_out_cross_validation(df: pd.DataFrame, response: str, predictor: s
         y_train = train_df[response]
         model = sm.OLS(y_train, X_train).fit()
 
-        # Predict - ensure X_test has same structure as X_train
+        # Predict - manually construct X_test to ensure exact column alignment
         X_test = sm.add_constant(test_df[[predictor]])
+        # Ensure X_test has same columns in same order as X_train
+        X_test = X_test[X_train.columns]
+
         # Predict returns pandas Series when input is DataFrame
         y_pred = model.predict(X_test).iloc[0]
         y_true = test_df[response].iloc[0]
@@ -168,6 +171,8 @@ def backtest_model(df: pd.DataFrame, response: str, predictor: str, test_years: 
 
     # Predict on test set
     X_test = sm.add_constant(test_df[[predictor]])
+    # Ensure X_test has same columns in same order as X_train
+    X_test = X_test[X_train.columns]
     y_pred = model.predict(X_test)  # Returns pandas Series when input is DataFrame
     y_true = test_df[response]
 
