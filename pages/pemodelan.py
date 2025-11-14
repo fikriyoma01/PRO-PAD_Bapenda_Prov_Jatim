@@ -3,6 +3,7 @@ import statsmodels.api as sm
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
+import numpy as np
 
 from data_loader import load_pad_historis
 from utils.validation_utils import (
@@ -197,8 +198,12 @@ def show_modeling_page():
 
     # Visualisasi scatter + regresi
     st.subheader("📈 Visualisasi Scatterplot dengan Garis Regresi")
-    df_sorted = df.sort_values(predictor)
-    df_sorted["pred"] = model.predict(sm.add_constant(df_sorted[[predictor]]))
+    df_sorted = df.sort_values(predictor).copy()
+
+    # Prepare data for prediction using numpy arrays for consistency
+    X_sorted = df_sorted[[predictor]].values
+    X_sorted_with_const = np.column_stack([np.ones(len(X_sorted)), X_sorted])
+    df_sorted["pred"] = model.predict(X_sorted_with_const)
 
     # Create figure using go.Figure for better control
     fig = go.Figure()
@@ -257,11 +262,13 @@ def show_modeling_page():
     """)
 
     # Calculate fitted values and residuals
-    y_fitted = model.predict(sm.add_constant(df[[predictor]]))
+    X_full = df[[predictor]].values
+    X_full_with_const = np.column_stack([np.ones(len(X_full)), X_full])
+    y_fitted = model.predict(X_full_with_const)
     y_actual = df[response].values
 
     # Training metrics
-    train_metrics = calculate_all_metrics(y_actual, y_fitted.values)
+    train_metrics = calculate_all_metrics(y_actual, y_fitted)
 
     col1, col2 = st.columns(2)
 
@@ -387,7 +394,9 @@ def show_modeling_page():
             yaxis_title=f"{response} (Rupiah)",
             template="plotly_white",
             hovermode='x unified',
-            yaxis_tickformat=",.0f"
+            yaxis_tickformat=",.0f",
+            height=500,
+            margin=dict(l=80, r=80, t=100, b=80)
         )
 
         st.plotly_chart(fig_backtest, use_container_width=True)

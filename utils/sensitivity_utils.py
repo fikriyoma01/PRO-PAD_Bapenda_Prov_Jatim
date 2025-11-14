@@ -30,21 +30,26 @@ def calculate_sensitivity_single_var(
     Returns:
         dict: Sensitivity results
     """
-    # Run regression
-    X = sm.add_constant(df[[predictor]])
-    y = df[response]
-    model = sm.OLS(y, X).fit()
+    # Prepare data
+    X = df[[predictor]].values
+    y = df[response].values
 
-    # Base prediction
-    base_pred = model.predict([[1, base_value]])[0]
+    # Add constant manually
+    X_with_const = np.column_stack([np.ones(len(X)), X])
+
+    # Run regression with numpy arrays
+    model = sm.OLS(y, X_with_const).fit()
+
+    # Base prediction using numpy array
+    base_pred = model.predict(np.array([[1, base_value]]))[0]
 
     # Variation values
     lower_value = base_value * (1 - variation_pct)
     upper_value = base_value * (1 + variation_pct)
 
-    # Predictions with variations
-    lower_pred = model.predict([[1, lower_value]])[0]
-    upper_pred = model.predict([[1, upper_value]])[0]
+    # Predictions with variations using numpy arrays
+    lower_pred = model.predict(np.array([[1, lower_value]]))[0]
+    upper_pred = model.predict(np.array([[1, upper_value]]))[0]
 
     # Calculate impacts
     lower_impact = lower_pred - base_pred
@@ -65,7 +70,7 @@ def calculate_sensitivity_single_var(
         'upper_impact': upper_impact,
         'total_range': upper_pred - lower_pred,
         'elasticity': elasticity,
-        'coefficient': model.params[predictor]
+        'coefficient': model.params[1]  # Second parameter is the predictor coefficient
     }
 
 
