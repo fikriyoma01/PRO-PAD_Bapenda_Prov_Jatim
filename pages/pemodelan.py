@@ -19,6 +19,7 @@ from utils.sensitivity_utils import (
     interpret_sensitivity,
     format_sensitivity_table
 )
+from utils.audit_utils import log_model_run
 
 # Data historis dari layer CSV
 df = load_pad_historis()
@@ -102,6 +103,18 @@ def show_modeling_page():
     intercept = model.params["const"]
     pval = model.pvalues[predictor]
     r2 = model.rsquared
+
+    # Log to audit trail
+    log_model_run(
+        response=response,
+        predictor=predictor,
+        r2=r2,
+        details={
+            'coefficient': float(coef),
+            'intercept': float(intercept),
+            'p_value': float(pval)
+        }
+    )
 
     # --- Explanation Card untuk Metrics
     with st.expander("ℹ️ Panduan Memahami Metrics Regresi", expanded=False):

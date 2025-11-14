@@ -1,8 +1,12 @@
 ﻿import streamlit as st
 import importlib
+from utils.audit_utils import initialize_session
 
 # --- Konfigurasi halaman
 st.set_page_config(page_title="Dashboard Proyeksi PAD", layout="wide")
+
+# --- Initialize audit trail session
+initialize_session()
 
 # --- Daftar halaman
 PAGES = {
@@ -14,7 +18,8 @@ PAGES = {
     "🧭 Insight Terpadu": "insight",
     "📘 Implementasi Skenario HKPD": "hkpd",
     "🎯 Scenario Builder": "scenario_builder",
-    "📚 Metodologi": "metodologi"
+    "📚 Metodologi": "metodologi",
+    "📋 Audit Trail": "audit"
 }
 
 # --- Inisialisasi session state

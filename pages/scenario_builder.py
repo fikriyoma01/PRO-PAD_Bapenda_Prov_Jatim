@@ -8,6 +8,7 @@ import pandas as pd
 import statsmodels.api as sm
 import plotly.graph_objects as go
 from data_loader import load_pad_historis
+from utils.audit_utils import log_scenario_save
 
 
 def local_css():
@@ -341,6 +342,19 @@ def show_scenario_builder():
                 'impact': results['total_impact']
             }
             st.session_state.saved_scenarios.append(scenario_data)
+
+            # Log to audit trail
+            log_scenario_save(
+                scenario_name=scenario_name,
+                details={
+                    'year': year,
+                    'response': response,
+                    'projection': float(results['final_projection']),
+                    'impact': float(results['total_impact']),
+                    'num_variables': len(macro_values)
+                }
+            )
+
             st.success(f"✅ Scenario '{scenario_name}' saved!")
 
     with col2:

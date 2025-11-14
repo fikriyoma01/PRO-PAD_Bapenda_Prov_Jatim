@@ -11,6 +11,7 @@ from utils.scenario_utils import (
     format_scenario_comparison,
     explain_scenario_method
 )
+from utils.audit_utils import log_projection
 
 # Data historis (2018-2024) dari layer CSV
 df = load_pad_historis()
@@ -170,6 +171,20 @@ def show_projection_page():
                 "Moderat (Rata-rata)": pred,
                 "Pesimis (Batas Bawah)": pred * 0.95
             }
+
+        # Log projection to audit trail
+        log_projection(
+            response=response,
+            year=tahun,
+            value=float(proj[tahun]["Moderat (Rata-rata)"]),
+            scenario=scenario_method,
+            details={
+                'predictor': predictor,
+                'predictor_value': float(val),
+                'optimistic': float(proj[tahun]["Optimis (Batas Atas)"]),
+                'pessimistic': float(proj[tahun]["Pesimis (Batas Bawah)"])
+            }
+        )
 
     # --- Tabel hasil proyeksi
     st.subheader("📊 Hasil Proyeksi")

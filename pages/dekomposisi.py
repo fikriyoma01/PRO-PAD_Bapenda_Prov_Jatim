@@ -6,6 +6,7 @@ from datetime import datetime
 
 from data_loader import load_pad_historis, get_pkb_inputs, get_bbnkb_inputs, map_inputs
 from utils.export_utils import create_comprehensive_excel_report
+from utils.audit_utils import log_export
 
 def local_css():
     st.markdown(
@@ -710,6 +711,19 @@ def show_decomposition_tab():
 
         # Download button
         filename = f"PAD_Comprehensive_Report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+
+        # Log export to audit trail
+        log_export(
+            export_type='Excel Report',
+            filename=filename,
+            details={
+                'total_pkb_2025': float(total_pkb25),
+                'total_pkb_2026': float(total_pkb26),
+                'total_bbnkb_2025': float(bbn_total_2025),
+                'total_bbnkb_2026': float(bbn_total_2026),
+                'file_size_bytes': len(excel_bytes)
+            }
+        )
 
         st.download_button(
             label="📥 Download Excel Report (Comprehensive)",
