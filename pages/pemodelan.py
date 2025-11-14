@@ -87,6 +87,46 @@ def show_modeling_page():
     pval = model.pvalues[predictor]
     r2 = model.rsquared
 
+    # --- Explanation Card untuk Metrics
+    with st.expander("ℹ️ Panduan Memahami Metrics Regresi", expanded=False):
+        st.markdown("""
+        ### 📊 Penjelasan Metrics Regresi
+
+        **1. Koefisien (β - Beta)**
+        - **Definisi**: Menunjukkan seberapa besar perubahan pada variabel respon (PKB/BBNKB) jika prediktor (variabel makro) berubah 1 unit
+        - **Interpretasi**:
+          - Jika β = +500.000.000, maka kenaikan 1% PDRB akan meningkatkan PKB sebesar Rp 500 juta
+          - Nilai positif (+): prediktor meningkatkan respon
+          - Nilai negatif (-): prediktor menurunkan respon
+        - **Contoh**: Koefisien PDRB terhadap PKB = 800M artinya setiap kenaikan 1% PDRB meningkatkan PKB Rp 800M
+
+        **2. R² (R-Squared / Coefficient of Determination)**
+        - **Definisi**: Persentase variasi data yang dijelaskan oleh model (0 - 1)
+        - **Interpretasi**:
+          - **R² > 0.7**: Model sangat baik menjelaskan data (>70%)
+          - **R² 0.4 - 0.7**: Model cukup baik (40-70%)
+          - **R² < 0.4**: Model lemah (<40%)
+        - **Catatan**: R² tinggi ≠ model bagus untuk prediksi! Dengan hanya 7 data, R² tinggi bisa tanda overfitting
+        - **Contoh**: R² = 0.85 artinya 85% variasi PKB dijelaskan oleh PDRB, sisanya 15% oleh faktor lain
+
+        **3. p-value (Probabilitas)**
+        - **Definisi**: Probabilitas bahwa hubungan yang ditemukan terjadi secara kebetulan (bukan karena pengaruh nyata)
+        - **Interpretasi**:
+          - **p < 0.05**: Signifikan secara statistik (hubungan kemungkinan besar nyata) ✅
+          - **p > 0.05**: Tidak signifikan (hubungan mungkin kebetulan) ⚠️
+        - **Catatan**: Dengan dataset kecil (n=7), p-value harus diinterpretasi hati-hati
+        - **Contoh**: p-value = 0.03 artinya hanya 3% kemungkinan hubungan ini terjadi secara kebetulan
+
+        ---
+        ### ⚠️ **Peringatan Penting untuk Dataset Kecil**
+
+        Dataset PAD hanya 7 tahun (2018-2024), yang berarti:
+        - ✗ **Risiko Overfitting Tinggi**: Model bisa terlalu "pas" dengan data historis tapi gagal prediksi masa depan
+        - ✗ **Power Statistik Rendah**: Sulit mendeteksi hubungan nyata karena sampel kecil
+        - ✗ **Sensitivitas Outlier**: 1 data outlier dapat mengubah hasil drastis
+        - ✓ **Solusi**: Gunakan ensemble modeling, cross-validation, dan interpretasi hati-hati
+        """)
+
     # --- Kartu hasil
     col1, col2, col3 = st.columns(3)
     with col1:

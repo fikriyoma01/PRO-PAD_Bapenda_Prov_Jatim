@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import statsmodels.api as sm
 import plotly.express as px
+import plotly.graph_objects as go
+import numpy as np
 
 from data_loader import load_pad_historis
 
@@ -91,73 +93,174 @@ def show_projection_page():
     # Jalankan regresi sederhana
     model = run_regression(response, predictor)
 
-    # --- Prediksi 2025 & 2026 untuk respon
+    # --- Prediksi 2025 & 2026 untuk respon dengan confidence intervals
     proj = {}
+    ci_data = {}  # Untuk menyimpan confidence intervals
+
     for tahun, val in zip([2025, 2026], [val_2025, val_2026]):
-        pred = model.predict([1, val])[0]
+        # Prediksi nilai
+        pred_input = np.array([[1, val]])
+        pred = model.predict(pred_input)[0]
+
+        # Hitung confidence interval (95%)
+        pred_summary = model.get_prediction(pred_input)
+        ci = pred_summary.conf_int(alpha=0.05)[0]  # 95% CI
+
         proj[tahun] = {
             "Pesimis (Batas Atas)": pred * 1.05,
             "Moderat (Rata-rata)": pred,
             "Optimis (Batas Bawah)": pred * 0.95
         }
 
+        ci_data[tahun] = {
+            "lower": ci[0],
+            "upper": ci[1],
+            "mean": pred
+        }
+
     # --- Tabel hasil proyeksi
     st.subheader("📊 Hasil Proyeksi")
     proj_df = pd.DataFrame(proj).T
-    st.dataframe(proj_df.style.format("{:,.0f}"), use_container_width=True)
 
-    # --- Visualisasi
-    # --- Visualisasi
-    st.subheader("📈 Visualisasi Proyeksi")
-    hist_series = (
-        df[["Tahun", response]]
-        .sort_values("Tahun")
-        .rename(columns={response: "Nilai"})
-    )
-    hist_series["Skenario"] = "Aktual"
+    # Tambahkan confidence intervals ke tabel
+    ci_df = pd.DataFrame(ci_data).T
+    ci_df.columns = ['CI Lower (95%)', 'CI Upper (95%)', 'Prediksi Tengah']
+    ci_df = ci_df[['Prediksi Tengah', 'CI Lower (95%)', 'CI Upper (95%)']]
 
-    proj_long = (
-        proj_df.reset_index()
-        .rename(columns={"index": "Tahun"})
-        .melt(id_vars="Tahun", var_name="Skenario", value_name="Nilai")
-    )
+    # Gabungkan dengan proyeksi skenario
+    combined_df = pd.concat([proj_df, ci_df], axis=1)
+    st.dataframe(combined_df.style.format("{:,.0f}"), use_container_width=True)
 
-    if not hist_series.empty and not proj_long.empty:
-        last_year = int(hist_series["Tahun"].max())
-        last_value = float(
-            hist_series.loc[hist_series["Tahun"] == last_year, "Nilai"].iloc[0]
-        )
-        bridge_rows = [
-            {"Tahun": last_year, "Skenario": scen, "Nilai": last_value}
-            for scen in proj_long["Skenario"].unique()
-        ]
-        proj_long = pd.concat([pd.DataFrame(bridge_rows), proj_long], ignore_index=True)
+    # Penjelasan Confidence Interval
+    with st.expander("ℹ️ Apa itu Confidence Interval (CI)?"):
+        st.markdown("""
+        **Confidence Interval (CI) 95%** menunjukkan rentang di mana kita yakin 95% bahwa nilai sebenarnya akan berada.
 
-    combined_chart = pd.concat([hist_series, proj_long], ignore_index=True)
-    combined_chart = combined_chart.sort_values(["Tahun", "Skenario"])
+        - **CI Lower**: Batas bawah interval kepercayaan (lebih konservatif)
+        - **CI Upper**: Batas atas interval kepercayaan (lebih optimis)
+        - **Prediksi Tengah**: Nilai prediksi paling mungkin
 
-    fig = px.line(
-        combined_chart,
-        x="Tahun",
-        y="Nilai",
-        color="Skenario",
-        markers=True,
-        title=f"Proyeksi {response} 2018-2026 ({predictor} sebagai prediktor)",
-    )
+        Semakin lebar interval CI, semakin tinggi ketidakpastian proyeksi. Dengan hanya 7 tahun data (2018-2024),
+        interval CI cenderung lebih lebar dibanding jika kita memiliki lebih banyak data historis.
 
-    line_dash_map = {"Aktual": "solid"}
-    for scen in proj_long["Skenario"].unique():
-        line_dash_map.setdefault(scen, "dash")
+        **Catatan**: CI berbeda dengan skenario Optimis/Moderat/Pesimis. CI dihitung berdasarkan statistik model,
+        sedangkan skenario menggunakan perkalian ±5% dari prediksi tengah.
+        """)
 
-    for trace in fig.data:
-        trace.update(line=dict(dash=line_dash_map.get(trace.name, "dash")))
 
+    # --- Visualisasi dengan Confidence Intervals
+    st.subheader("📈 Visualisasi Proyeksi dengan Confidence Intervals")
+
+    # Create figure using graph_objects for better control
+    fig = go.Figure()
+
+    # 1. Data Historis (Aktual)
+    hist_years = df["Tahun"].values
+    hist_values = df[response].values
+    fig.add_trace(go.Scatter(
+        x=hist_years,
+        y=hist_values,
+        mode='lines+markers',
+        name='Aktual',
+        line=dict(color='#1976d2', width=3),
+        marker=dict(size=8)
+    ))
+
+    # 2. Confidence Interval Band (Shaded Area)
+    last_year = int(df["Tahun"].max())
+    last_value = float(df.loc[df["Tahun"] == last_year, response].iloc[0])
+
+    ci_years = [last_year, 2025, 2026]
+    ci_upper = [last_value, ci_data[2025]['upper'], ci_data[2026]['upper']]
+    ci_lower = [last_value, ci_data[2025]['lower'], ci_data[2026]['lower']]
+
+    # Upper bound
+    fig.add_trace(go.Scatter(
+        x=ci_years,
+        y=ci_upper,
+        mode='lines',
+        name='CI Upper (95%)',
+        line=dict(width=0),
+        showlegend=False,
+        hoverinfo='skip'
+    ))
+
+    # Lower bound with fill
+    fig.add_trace(go.Scatter(
+        x=ci_years,
+        y=ci_lower,
+        mode='lines',
+        name='Confidence Interval 95%',
+        line=dict(width=0),
+        fillcolor='rgba(68, 68, 68, 0.15)',
+        fill='tonexty',
+        hovertemplate='CI: %{y:,.0f}<extra></extra>'
+    ))
+
+    # 3. Skenario Proyeksi
+    proj_years = [last_year, 2025, 2026]
+
+    # Moderat (Prediksi Tengah)
+    moderat_values = [last_value, proj[2025]["Moderat (Rata-rata)"], proj[2026]["Moderat (Rata-rata)"]]
+    fig.add_trace(go.Scatter(
+        x=proj_years,
+        y=moderat_values,
+        mode='lines+markers',
+        name='Moderat (Rata-rata)',
+        line=dict(color='#388e3c', width=2, dash='dash'),
+        marker=dict(size=8, symbol='diamond')
+    ))
+
+    # Optimis
+    optimis_values = [last_value, proj[2025]["Optimis (Batas Bawah)"], proj[2026]["Optimis (Batas Bawah)"]]
+    fig.add_trace(go.Scatter(
+        x=proj_years,
+        y=optimis_values,
+        mode='lines+markers',
+        name='Optimis (Batas Bawah)',
+        line=dict(color='#4caf50', width=2, dash='dot'),
+        marker=dict(size=7)
+    ))
+
+    # Pesimis
+    pesimis_values = [last_value, proj[2025]["Pesimis (Batas Atas)"], proj[2026]["Pesimis (Batas Atas)"]]
+    fig.add_trace(go.Scatter(
+        x=proj_years,
+        y=pesimis_values,
+        mode='lines+markers',
+        name='Pesimis (Batas Atas)',
+        line=dict(color='#f57c00', width=2, dash='dot'),
+        marker=dict(size=7)
+    ))
+
+    # Layout
     fig.update_layout(
+        title=f"Proyeksi {response} 2018-2026 ({predictor} sebagai prediktor)<br><sub>Area abu-abu = Confidence Interval 95%</sub>",
+        xaxis=dict(
+            title="Tahun",
+            tickmode="array",
+            tickvals=list(range(2018, 2027))
+        ),
+        yaxis=dict(
+            title=f"{response} (Miliar Rupiah)",
+            rangemode="tozero"
+        ),
         template="plotly_white",
-        xaxis=dict(tickmode="array", tickvals=list(range(2018, 2027))),
-        yaxis=dict(rangemode="tozero"),
+        hovermode='x unified',
+        legend=dict(
+            orientation="v",
+            yanchor="top",
+            y=0.99,
+            xanchor="left",
+            x=0.01,
+            bgcolor="rgba(255, 255, 255, 0.8)"
+        )
     )
+
     st.plotly_chart(fig, use_container_width=True)
+
+    # Catatan tambahan
+    st.info("💡 **Area abu-abu** menunjukkan Confidence Interval 95%, yaitu rentang di mana nilai aktual kemungkinan besar akan berada berdasarkan model statistik.")
 
 
 def app():

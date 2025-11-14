@@ -152,6 +152,38 @@ def app():
         unsafe_allow_html=True,
     )
 
+    # Explanation Card untuk HKPD
+    with st.expander("ℹ️ Apa itu HKPD dan Bagaimana Cara Kerjanya?", expanded=False):
+        st.markdown("""
+        ### 📚 Penjelasan HKPD (Hasil Kemitraan Pemerintah Daerah)
+
+        **Definisi:**
+        HKPD adalah mekanisme pembagian hasil pajak daerah antara Pemerintah Provinsi dengan Pemerintah Kabupaten/Kota berdasarkan proporsi tertentu sesuai peraturan perundang-undangan.
+
+        **Cara Kerja dalam Dashboard:**
+        1. **Data Dasar**: Proyeksi PKB dan BBNKB dihitung terlebih dahulu menggunakan model regresi + decomposition
+        2. **Faktor HKPD**: Anda dapat mengatur porsi HKPD (default: 60.24%) menggunakan slider
+        3. **Skenario Calculation**:
+           - PKB Skenario = PKB Proyeksi × (Porsi HKPD / 100)
+           - BBNKB Skenario = BBNKB Proyeksi × (Porsi HKPD / 100)
+
+        **Interpretasi:**
+        - **Porsi 100%**: Seluruh pendapatan untuk Provinsi
+        - **Porsi 60.24%**: 60.24% untuk Provinsi, sisanya untuk Kabupaten/Kota
+        - **Porsi 50%**: Pembagian rata antara Provinsi dan Kabupaten/Kota
+
+        **Contoh:**
+        Jika PKB 2025 diproyeksikan Rp 8 Triliun dan porsi HKPD 60.24%, maka:
+        - **PKB Skenario Provinsi** = Rp 8T × 60.24% = Rp 4.82T
+        - **Bagian Kab/Kota** = Rp 8T × 39.76% = Rp 3.18T
+
+        **Catatan Penting:**
+        - Porsi HKPD ditentukan berdasarkan regulasi (UU, Perpres, Pergub)
+        - Dashboard ini memungkinkan simulasi berbagai skenario porsi
+        - Nilai aktual historis (2018-2024) tidak terpengaruh faktor HKPD dalam visualisasi ini
+        """)
+
+
     # Inisialisasi nilai awal di session_state (sekali saja)
     if "ratio_value" not in st.session_state:
         st.session_state.ratio_value = DEFAULT_RATIO * 100
