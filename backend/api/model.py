@@ -63,26 +63,82 @@ def calculate_metrics(actual, predicted):
     mse = mean_squared_error(actual, predicted)
     rmse = np.sqrt(mse)
     mae = mean_absolute_error(actual, predicted)
-    r2 = r2_score(actual, predicted)
 
-    # MAPE
-    mape = np.mean(np.abs((actual - predicted) / actual)) * 100
+    # R2 score - handle edge cases
+    try:
+        r2 = r2_score(actual, predicted)
+        if not np.isfinite(r2):
+            r2 = 0.0
+    except:
+        r2 = 0.0
 
+    # MAPE - handle division by zero
+    with np.errstate(divide='ignore', invalid='ignore'):
+        mape = np.mean(np.abs((actual - predicted) / np.where(actual != 0, actual, 1))) * 100
+        if not np.isfinite(mape):
+            mape = 0.0
+
+    # Ensure all values are JSON-serializable
     return {
-        "mse": float(mse),
-        "rmse": float(rmse),
-        "mae": float(mae),
-        "r2": float(r2),
-        "mape": float(mape)
+        "mse": float(mse) if np.isfinite(mse) else 0.0,
+        "rmse": float(rmse) if np.isfinite(rmse) else 0.0,
+        "mae": float(mae) if np.isfinite(mae) else 0.0,
+        "r2": float(r2) if np.isfinite(r2) else 0.0,
+        "mape": float(mape) if np.isfinite(mape) else 0.0
     }
+
+
+def sanitize_float(value):
+    """Convert value to JSON-safe float"""
+    if value is None:
+        return None
+    try:
+        if not np.isfinite(value):
+            return None
+        return float(value)
+    except:
+        return None
 
 
 @router.post("/ols")
 async def run_ols_regression(request: OLSRequest):
     """Run OLS regression model with full statistics"""
+    # Load data
+    df = load_pad_historis()
+
+    # Validate response variable exists
+    if request.response_var not in df.columns:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Response variable '{request.response_var}' not found in dataset. Available columns: {', '.join(df.columns)}"
+        )
+
+    # Validate predictor variables exist
+    missing_vars = [var for var in request.predictor_vars if var not in df.columns]
+    if missing_vars:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Predictor variable(s) not found: {', '.join(missing_vars)}. Available columns: {', '.join(df.columns)}"
+        )
+
+    # Validate degrees of freedom
+    n_obs = len(df)
+    n_predictors = len(request.predictor_vars) + 1  # +1 for constant
+    df_resid = n_obs - n_predictors
+
+    if df_resid <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Not enough observations. Need at least {n_predictors + 1} observations for {len(request.predictor_vars)} predictors, but only have {n_obs}. Please reduce the number of predictor variables."
+        )
+
+    if df_resid < 2:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient degrees of freedom ({df_resid}). Please use fewer predictor variables or add more data."
+        )
+
     try:
-        # Load data
-        df = load_pad_historis()
 
         # Prepare data
         y = df[request.response_var]
@@ -116,25 +172,25 @@ async def run_ols_regression(request: OLSRequest):
                 "years": list(range(df['Tahun'].max() + 1, df['Tahun'].max() + 1 + request.forecast_years))
             }
 
-        # Return comprehensive results
+        # Return comprehensive results with sanitized values
         return {
             "success": True,
             "model": "OLS",
             "response_var": request.response_var,
             "predictor_vars": request.predictor_vars,
             "results": {
-                "r_squared": float(model.rsquared),
-                "adj_r_squared": float(model.rsquared_adj),
-                "f_statistic": float(model.fvalue),
-                "f_pvalue": float(model.f_pvalue),
-                "aic": float(model.aic),
-                "bic": float(model.bic),
-                "params": {k: float(v) for k, v in model.params.items()},
-                "pvalues": {k: float(v) for k, v in model.pvalues.items()},
-                "std_errors": {k: float(v) for k, v in model.bse.items()},
-                "conf_int": {k: [float(v[0]), float(v[1])] for k, v in model.conf_int().iterrows()},
-                "predictions": predictions.tolist(),
-                "residuals": model.resid.tolist(),
+                "r_squared": sanitize_float(model.rsquared) or 0.0,
+                "adj_r_squared": sanitize_float(model.rsquared_adj) or 0.0,
+                "f_statistic": sanitize_float(model.fvalue) or 0.0,
+                "f_pvalue": sanitize_float(model.f_pvalue) or 1.0,
+                "aic": sanitize_float(model.aic) or 0.0,
+                "bic": sanitize_float(model.bic) or 0.0,
+                "params": {k: sanitize_float(v) or 0.0 for k, v in model.params.items()},
+                "pvalues": {k: sanitize_float(v) or 1.0 for k, v in model.pvalues.items()},
+                "std_errors": {k: sanitize_float(v) or 0.0 for k, v in model.bse.items()},
+                "conf_int": {k: [sanitize_float(v[0]) or 0.0, sanitize_float(v[1]) or 0.0] for k, v in model.conf_int().iterrows()},
+                "predictions": [sanitize_float(p) or 0.0 for p in predictions],
+                "residuals": [sanitize_float(r) or 0.0 for r in model.resid],
                 "metrics": metrics
             },
             "forecast": forecast,
@@ -151,18 +207,30 @@ async def run_arima(request: ARIMARequest):
         # Load data
         df = load_pad_historis()
 
+        # Validate response variable exists
+        if request.response_var not in df.columns:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Response variable '{request.response_var}' not found in dataset"
+            )
+
         # Get time series
         y = df[request.response_var]
 
+        # Convert order to tuple if it's a list
+        order = tuple(request.order) if isinstance(request.order, list) else request.order
+
         # Fit ARIMA model
-        model = ARIMA(y, order=request.order)
+        model = ARIMA(y, order=order)
         fitted_model = model.fit()
 
         # Get fitted values
         fitted = fitted_model.fittedvalues
 
-        # Calculate metrics
-        metrics = calculate_metrics(y[1:], fitted[1:])  # Skip first value due to differencing
+        # Calculate metrics on all available fitted values
+        # Align y and fitted values (handle any NaN values from differencing)
+        valid_idx = ~(fitted.isna() | y.isna())
+        metrics = calculate_metrics(y[valid_idx], fitted[valid_idx])
 
         # Forecast
         forecast_obj = fitted_model.forecast(steps=request.forecast_steps)
@@ -200,15 +268,28 @@ async def run_exp_smoothing(request: ExpSmoothingRequest):
         # Load data
         df = load_pad_historis()
 
+        # Validate response variable exists
+        if request.response_var not in df.columns:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Response variable '{request.response_var}' not found in dataset"
+            )
+
         # Get time series
         y = df[request.response_var]
+
+        # Validate seasonal configuration
+        seasonal_periods = None
+        if request.seasonal is not None and request.seasonal != 'None':
+            # Default to 4 for quarterly data, can be made configurable
+            seasonal_periods = 4
 
         # Fit Exponential Smoothing
         model = ExponentialSmoothing(
             y,
             trend=request.trend,
-            seasonal=request.seasonal,
-            seasonal_periods=None
+            seasonal=request.seasonal if request.seasonal != 'None' else None,
+            seasonal_periods=seasonal_periods
         )
         fitted_model = model.fit()
 
@@ -218,8 +299,19 @@ async def run_exp_smoothing(request: ExpSmoothingRequest):
         # Calculate metrics
         metrics = calculate_metrics(y, fitted)
 
-        # Forecast
-        forecast = fitted_model.forecast(steps=request.forecast_steps)
+        # Forecast with simulation for confidence intervals
+        forecast_result = fitted_model.forecast(steps=request.forecast_steps)
+
+        # Simulate forecasts for confidence intervals
+        simulations = fitted_model.simulate(
+            nsimulations=request.forecast_steps,
+            repetitions=1000,
+            random_errors='bootstrap'
+        )
+
+        # Calculate confidence intervals from simulations
+        lower_ci = np.percentile(simulations, 2.5, axis=1)
+        upper_ci = np.percentile(simulations, 97.5, axis=1)
 
         return {
             "success": True,
@@ -227,16 +319,20 @@ async def run_exp_smoothing(request: ExpSmoothingRequest):
             "response_var": request.response_var,
             "results": {
                 "aic": float(fitted_model.aic) if hasattr(fitted_model, 'aic') else None,
+                "bic": float(fitted_model.bic) if hasattr(fitted_model, 'bic') else None,
                 "fitted_values": fitted.tolist(),
                 "residuals": (y - fitted).tolist(),
                 "metrics": metrics,
                 "params": {
                     "smoothing_level": float(fitted_model.params['smoothing_level']) if 'smoothing_level' in fitted_model.params else None,
-                    "smoothing_trend": float(fitted_model.params['smoothing_trend']) if 'smoothing_trend' in fitted_model.params else None
+                    "smoothing_trend": float(fitted_model.params['smoothing_trend']) if 'smoothing_trend' in fitted_model.params else None,
+                    "smoothing_seasonal": float(fitted_model.params.get('smoothing_seasonal', 0.0)) if 'smoothing_seasonal' in fitted_model.params else None
                 }
             },
             "forecast": {
-                "predictions": forecast.tolist(),
+                "predictions": forecast_result.tolist(),
+                "lower_ci": lower_ci.tolist(),
+                "upper_ci": upper_ci.tolist(),
                 "years": list(range(df['Tahun'].max() + 1, df['Tahun'].max() + 1 + request.forecast_steps))
             }
         }
@@ -251,8 +347,41 @@ async def run_ensemble(request: EnsembleRequest):
         # Load data
         df = load_pad_historis()
 
+        # Validate response variable exists
+        if request.response_var not in df.columns:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Response variable '{request.response_var}' not found in dataset"
+            )
+
+        # Validate predictor variables exist
+        for pred_var in request.predictor_vars:
+            if pred_var not in df.columns:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Predictor variable '{pred_var}' not found in dataset"
+                )
+
         # Default weights
         weights = request.weights or {"ols": 0.4, "arima": 0.3, "exp_smoothing": 0.3}
+
+        # Validate weights
+        if not all(k in weights for k in ["ols", "arima", "exp_smoothing"]):
+            raise HTTPException(
+                status_code=400,
+                detail="Weights must include 'ols', 'arima', and 'exp_smoothing' keys"
+            )
+
+        weights_sum = sum(weights.values())
+        if not (0.99 <= weights_sum <= 1.01):  # Allow small floating point errors
+            raise HTTPException(
+                status_code=400,
+                detail=f"Weights must sum to 1.0, but sum to {weights_sum:.4f}"
+            )
+
+        # Normalize weights to ensure they sum exactly to 1.0
+        total = sum(weights.values())
+        weights = {k: v / total for k, v in weights.items()}
 
         # Run OLS
         ols_request = OLSRequest(
@@ -354,23 +483,40 @@ async def cross_validate(data: Dict[str, Any]):
 
         # Leave-One-Out CV
         for i in range(n):
-            # Create train set (exclude i)
-            train_idx = [j for j in range(n) if j != i]
-            X_train = X.iloc[train_idx]
-            y_train = y.iloc[train_idx]
+            try:
+                # Create train set (exclude i)
+                train_idx = [j for j in range(n) if j != i]
+                X_train = X.iloc[train_idx]
+                y_train = y.iloc[train_idx]
 
-            # Test set (only i)
-            X_test = X.iloc[[i]]
-            y_test = y.iloc[i]
+                # Test set (only i)
+                X_test = X.iloc[[i]]
+                y_test = y.iloc[i]
 
-            # Fit model
-            model = sm.OLS(y_train, X_train).fit()
+                # Fit model - suppress warnings
+                import warnings
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    model = sm.OLS(y_train, X_train).fit()
 
-            # Predict
-            pred = model.predict(X_test)[0]
+                # Predict
+                pred = model.predict(X_test)
+                if hasattr(pred, 'iloc'):
+                    pred = pred.iloc[0]
+                elif hasattr(pred, '__len__'):
+                    pred = pred[0]
 
-            cv_predictions.append(pred)
-            cv_actual.append(y_test)
+                cv_predictions.append(float(pred))
+                cv_actual.append(float(y_test))
+            except Exception as inner_e:
+                # Skip this fold if there's an error
+                print(f"Error in fold {i}: {type(inner_e).__name__}: {str(inner_e)}")
+                import traceback
+                traceback.print_exc()
+                continue
+
+        if len(cv_predictions) == 0:
+            raise ValueError("No successful cross-validation folds completed")
 
         # Calculate CV metrics
         metrics = calculate_metrics(cv_actual, cv_predictions)
@@ -379,12 +525,14 @@ async def cross_validate(data: Dict[str, Any]):
             "success": True,
             "method": "Leave-One-Out Cross-Validation",
             "n_folds": n,
+            "completed_folds": len(cv_predictions),
             "metrics": metrics,
             "predictions": cv_predictions,
             "actual": cv_actual
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Cross-Validation Error: {str(e)}")
+        import traceback
+        raise HTTPException(status_code=500, detail=f"Cross-Validation Error: {str(e)}\n{traceback.format_exc()}")
 
 
 @router.post("/backtest")

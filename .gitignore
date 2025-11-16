@@ -3,3 +3,6 @@ __pycache__/
 *.pyc
 .DS_Store
 audit_log.json
+./backend/venv/
+./frontend/node_modules/
+./frontend/.env/

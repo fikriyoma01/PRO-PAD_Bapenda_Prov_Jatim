@@ -4,8 +4,6 @@ from pathlib import Path
 from typing import Dict
 
 import pandas as pd
-import streamlit as st
-from utils.audit_utils import log_data_load
 
 DATA_DIR = Path(__file__).resolve().parent / "datasets"
 
@@ -17,36 +15,25 @@ def _read_csv(filename: str) -> pd.DataFrame:
     return pd.read_csv(path)
 
 
-@st.cache_data(show_spinner=False)
 def load_pad_historis() -> pd.DataFrame:
+    """Load historical PAD data from CSV"""
     df = _read_csv("pad_historis.csv")
     df = df.rename(columns={"Rasio_Gini": "Rasio Gini"})
     df = df.rename(columns={"BI7DRR": "Suku Bunga"})
     df["Tahun"] = df["Tahun"].astype(int)
-
-    # Log data load (only once per cache refresh)
-    log_data_load(
-        source="pad_historis.csv",
-        records=len(df),
-        details={
-            'columns': list(df.columns),
-            'year_range': f"{df['Tahun'].min()}-{df['Tahun'].max()}"
-        }
-    )
-
     return df
 
 
-@st.cache_data(show_spinner=False)
 def load_pkb_inputs() -> pd.DataFrame:
+    """Load PKB inputs from CSV"""
     df = _read_csv("pkb_inputs.csv")
     df["tahun"] = df["tahun"].astype(int)
     df["nilai"] = pd.to_numeric(df["nilai"], errors="coerce").fillna(0)
     return df
 
 
-@st.cache_data(show_spinner=False)
 def load_bbnkb_inputs() -> pd.DataFrame:
+    """Load BBNKB inputs from CSV"""
     df = _read_csv("bbnkb_inputs.csv")
     df["tahun"] = df["tahun"].astype(int)
     df["nilai"] = pd.to_numeric(df["nilai"], errors="coerce").fillna(0)
