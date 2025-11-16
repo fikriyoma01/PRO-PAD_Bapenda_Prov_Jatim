@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { FileText, TrendingUp, DollarSign, PieChart as PieChartIcon, Info } from 'lucide-react';
-import Card from '../components/Card';
-import MetricCard from '../components/MetricCard';
-import Select from '../components/Select';
-import BarChart from '../components/BarChart';
-import PieChart from '../components/PieChart';
+import Card from '../components/ui/Card';
+import MetricCard from '../components/ui/MetricCard';
+import Select from '../components/ui/Select';
+import BarChart from '../components/charts/BarChart';
+import PieChart from '../components/charts/PieChart';
 import { dataAPI } from '../services/api';
 
 const SCENARIO_OPTIONS = [

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Settings, Palette, Type, Layout, Save, RotateCcw, Sun, Moon, Monitor, CheckCircle, AlertCircle } from 'lucide-react';
-import Card from '../components/Card';
-import Button from '../components/Button';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
 
 const COLOR_THEMES = [
   { id: 'default', name: 'Default', primary: '#0891b2', secondary: '#06b6d4' },

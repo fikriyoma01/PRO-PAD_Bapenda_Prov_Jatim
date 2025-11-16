@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { BarChart3, TrendingUp, TrendingDown } from 'lucide-react';
-import Card from '../components/Card';
-import Select from '../components/Select';
-import WaterfallChart from '../components/WaterfallChart';
-import BarChart from '../components/BarChart';
+import Card from '../components/ui/Card';
+import Select from '../components/ui/Select';
+import WaterfallChart from '../components/charts/WaterfallChart';
+import BarChart from '../components/charts/BarChart';
 import { dataAPI } from '../services/api';
 
 const YEAR_OPTIONS = [

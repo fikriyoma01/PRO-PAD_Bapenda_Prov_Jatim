@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, Download, Info, Activity } from 'lucide-react';
-import Card from '../components/Card';
-import Button from '../components/Button';
-import Select from '../components/Select';
-import LineChart from '../components/LineChart';
-import MetricCard from '../components/MetricCard';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import Select from '../components/ui/Select';
+import LineChart from '../components/charts/LineChart';
+import MetricCard from '../components/ui/MetricCard';
 import { projectionAPI, dataAPI } from '../services/api';
 
 const MODEL_OPTIONS = [

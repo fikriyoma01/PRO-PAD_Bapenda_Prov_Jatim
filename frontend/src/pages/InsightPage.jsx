@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Lightbulb, TrendingUp, AlertTriangle, CheckCircle, Info } from 'lucide-react';
-import Card from '../components/Card';
-import MetricCard from '../components/MetricCard';
-import LineChart from '../components/LineChart';
-import BarChart from '../components/BarChart';
+import Card from '../components/ui/Card';
+import MetricCard from '../components/ui/MetricCard';
+import LineChart from '../components/charts/LineChart';
+import BarChart from '../components/charts/BarChart';
 import { dataAPI, projectionAPI, analysisAPI } from '../services/api';
 
 export default function InsightPage() {
