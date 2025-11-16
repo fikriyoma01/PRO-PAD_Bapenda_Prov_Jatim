@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Settings, Palette, Type, Layout, Save, RotateCcw, Sun, Moon, Monitor, CheckCircle, AlertCircle } from 'lucide-react';
-import Card from '../components/ui/Card';
+import { Card } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 
 const COLOR_THEMES = [

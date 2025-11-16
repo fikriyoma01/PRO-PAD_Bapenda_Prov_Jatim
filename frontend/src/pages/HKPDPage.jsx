@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { FileText, TrendingUp, DollarSign, PieChart as PieChartIcon, Info } from 'lucide-react';
-import Card from '../components/ui/Card';
+import { Card } from '../components/ui/Card';
 import MetricCard from '../components/ui/MetricCard';
 import Select from '../components/ui/Select';
 import BarChart from '../components/charts/BarChart';

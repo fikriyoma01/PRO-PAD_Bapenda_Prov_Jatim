@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Edit, Plus, Trash2, Save, Download, Upload, CheckCircle, AlertCircle, TrendingUp } from 'lucide-react';
-import Card from '../components/ui/Card';
+import { Card } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 
 const DEFAULT_VARIABLES = [

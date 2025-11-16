@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BarChart3, TrendingUp, TrendingDown } from 'lucide-react';
-import Card from '../components/ui/Card';
+import { Card } from '../components/ui/Card';
 import Select from '../components/ui/Select';
 import WaterfallChart from '../components/charts/WaterfallChart';
 import BarChart from '../components/charts/BarChart';

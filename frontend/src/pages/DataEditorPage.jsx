@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Database, Download, Upload, Save, Plus } from 'lucide-react';
-import Card from '../components/ui/Card';
+import { Card } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import DataTable from '../components/ui/DataTable';
 import { dataAPI } from '../services/api';

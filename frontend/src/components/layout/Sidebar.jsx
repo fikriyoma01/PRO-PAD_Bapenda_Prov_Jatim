@@ -16,6 +16,7 @@ import {
   Activity,
   Menu,
   X,
+  Presentation,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -29,6 +30,7 @@ const navigationItems = [
   { name: 'HKPD', path: '/hkpd', icon: FileText },
   { name: 'Scenario Builder', path: '/scenario-builder', icon: Layers },
   { name: 'Decision Support', path: '/decision-support', icon: CheckSquare },
+  { name: 'Executive Report', path: '/executive-report', icon: Presentation },
 ];
 
 const settingsItems = [

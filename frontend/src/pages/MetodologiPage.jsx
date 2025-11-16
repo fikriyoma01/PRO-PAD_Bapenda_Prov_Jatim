@@ -1,5 +1,5 @@
 import { BookOpen, TrendingUp, BarChart3, Activity, FileText, AlertCircle } from 'lucide-react';
-import Card from '../components/ui/Card';
+import { Card } from '../components/ui/Card';
 
 export default function MetodologiPage() {
   return (

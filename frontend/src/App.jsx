@@ -11,6 +11,7 @@ import InsightPage from './pages/InsightPage';
 import HKPDPage from './pages/HKPDPage';
 import ScenarioBuilderPage from './pages/ScenarioBuilderPage';
 import DecisionSupportPage from './pages/DecisionSupportPage';
+import ExecutiveReportPage from './pages/ExecutiveReportPage';
 import UICustomizationPage from './pages/UICustomizationPage';
 import VariableManagerPage from './pages/VariableManagerPage';
 import PolicySettingsPage from './pages/PolicySettingsPage';
@@ -32,6 +33,7 @@ function App() {
           <Route path="/hkpd" element={<HKPDPage />} />
           <Route path="/scenario-builder" element={<ScenarioBuilderPage />} />
           <Route path="/decision-support" element={<DecisionSupportPage />} />
+          <Route path="/executive-report" element={<ExecutiveReportPage />} />
           <Route path="/ui-customization" element={<UICustomizationPage />} />
           <Route path="/variable-manager" element={<VariableManagerPage />} />
           <Route path="/policy-settings" element={<PolicySettingsPage />} />

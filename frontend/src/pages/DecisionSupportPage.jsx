@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Target, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
-import Card from '../components/ui/Card';
+import { Card } from '../components/ui/Card';
 import MetricCard from '../components/ui/MetricCard';
 import LineChart from '../components/charts/LineChart';
 import { dataAPI, projectionAPI } from '../services/api';
