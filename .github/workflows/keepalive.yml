@@ -1,0 +1,45 @@
+name: Keep-alive PRO-PAD (1 bulan)
+
+# Menjaga https://pro-pad.streamlit.app/ tetap "hangat" di Streamlit Cloud
+# free tier (app suspend setelah ~5 menit idle). Pinger tiap 3 menit.
+# Workflow ini MENGHAPUS DIRINYA setelah 2026-12-02 (1 bulan).
+
+on:
+  schedule:
+    - cron: "*/3 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping app
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" -L --max-time 90 https://pro-pad.streamlit.app/ || echo "000")
+          echo "HTTP $code — $(date -u '+%F %T UTC')"
+          # Cold start bisa lambat; yang penting request terkirim ke app.
+          exit 0
+
+  self-delete:
+    if: always()
+    needs: ping
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hapus workflow jika lewat 1 bulan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          END_DATE: "2026-12-02"
+        run: |
+          TODAY=$(date -u +%F)
+          if [[ "$TODAY" > "$END_DATE" ]]; then
+            echo "Lewat $END_DATE — menghapus workflow keep-alive"
+            SHA=$(gh api "repos/${{ github.repository }}/contents/.github/workflows/keepalive.yml" --jq .sha)
+            gh api -X DELETE "repos/${{ github.repository }}/contents/.github/workflows/keepalive.yml" \
+              -f sha="$SHA" \
+              -f message="chore: stop keep-alive (masa 1 bulan selesai)" || true
+          else
+            echo "Masih aktif — keep-alive berjalan sampai $END_DATE"
+          fi
