@@ -1,0 +1,208 @@
+/*
+=====================================================
+PRO-PAD Dashboard - Dark Theme
+Diterapkan saat:
+  - theme mode = "dark" (paksa), ATAU
+  - theme mode = "auto" DAN client (Chrome) memilih dark
+    (dibungkus @media (prefers-color-scheme: dark) oleh utils/theme_mode.py)
+File ini TIDAK boleh berisi @media lain (akan dibungkus utuh).
+=====================================================
+*/
+
+/* === Variabel tema (custom + Streamlit core) === */
+:root,
+[data-testid="stTheme"] {
+    /* Custom surfaces */
+    --app-bg: linear-gradient(135deg, #0f1420 0%, #161d2e 100%);
+    --card-bg: #1a2233;
+    --card-border: rgba(255, 255, 255, 0.08);
+    --gray-light: #1e2637;
+    --gray-medium: #2d3748;
+    --text-dark: #e2e8f0;
+    --text-muted: #9aa4b2;
+
+    /* Streamlit core theme variables */
+    --background-color: #0f1420;
+    --secondary-background-color: #1a2233;
+    --text-color: #e2e8f0;
+    --font-color: #c3cad5;
+    --header-color: #e2e8f0;
+    --border-color: #2d3748;
+    --edge-color: #232c3d;
+    --primary-color: #3584e4;
+    --primary-background: rgba(53, 132, 228, 0.15);
+    --text-selection-color: rgba(53, 132, 228, 0.4);
+    --table-row-hover-background: rgba(255, 255, 255, 0.05);
+}
+
+/* === Surface utama === */
+.stApp {
+    background: var(--app-bg) !important;
+}
+
+[data-testid="stAppViewContainer"] {
+    background: var(--background-color);
+}
+
+/* Container utama halaman (app.py) */
+.main-container {
+    background-color: var(--card-bg) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Teks & heading markdown (spesifisitas rendah agar tidak menimpa .gradient-header) */
+[data-testid="stMarkdownContainer"] {
+    color: var(--text-color);
+}
+
+[data-testid="stMarkdownContainer"] :where(h1, h2, h3, h4, h5, h6) {
+    color: var(--header-color);
+}
+
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] li,
+[data-testid="stMarkdownContainer"] span {
+    color: var(--text-color);
+}
+
+/* === Komponen custom === */
+.modern-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.modern-card:hover {
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+.metric-card {
+    background: var(--card-bg);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.metric-card:hover {
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+}
+
+.metric-card .metric-label {
+    color: var(--text-muted);
+}
+
+.metric-delta.positive {
+    background: rgba(76, 175, 80, 0.18);
+    color: #81c784;
+}
+
+.metric-delta.negative {
+    background: rgba(239, 83, 80, 0.18);
+    color: #e57373;
+}
+
+.info-box {
+    background: linear-gradient(135deg, rgba(26, 95, 180, 0.30) 0%, rgba(53, 132, 228, 0.18) 100%);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.warning-box {
+    background: linear-gradient(135deg, rgba(255, 152, 0, 0.25) 0%, rgba(255, 152, 0, 0.12) 100%);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.success-box {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.25) 0%, rgba(76, 175, 80, 0.12) 100%);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.danger-box {
+    background: linear-gradient(135deg, rgba(239, 83, 80, 0.25) 0%, rgba(239, 83, 80, 0.12) 100%);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.badge-primary {
+    background: rgba(53, 132, 228, 0.2);
+    color: #64b5f6;
+}
+
+.badge-success {
+    background: rgba(76, 175, 80, 0.2);
+    color: #81c784;
+}
+
+.badge-warning {
+    background: rgba(255, 152, 0, 0.2);
+    color: #ffb74d;
+}
+
+.badge-danger {
+    background: rgba(239, 83, 80, 0.2);
+    color: #e57373;
+}
+
+/* === Widget Streamlit === */
+.streamlit-expanderHeader {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    color: var(--text-dark);
+}
+
+.streamlit-expanderHeader:hover {
+    background: rgba(53, 132, 228, 0.08);
+}
+
+.streamlit-expanderContent {
+    border: 2px solid var(--border-color);
+    background: var(--card-bg);
+}
+
+.stTabs [data-baseweb="tab-list"] {
+    background: var(--card-bg);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.stTabs [data-baseweb="tab"] {
+    color: var(--text-dark);
+}
+
+.stTabs [data-baseweb="tab"]:hover {
+    background-color: rgba(53, 132, 228, 0.12);
+}
+
+.stSelectbox > div > div,
+.stRadio > div,
+.stNumberInput > div > div > input,
+.stTextInput > div > div > input,
+.stTextArea > div > div > textarea,
+.stMultiSelect > div > div {
+    background-color: var(--secondary-background-color);
+    border-color: var(--border-color);
+    color: var(--text-color);
+}
+
+[data-baseweb="select"] > div,
+[data-baseweb="select"] span {
+    color: var(--text-color);
+}
+
+.stNumberInput > div > div > input:focus,
+.stTextInput > div > div > input:focus {
+    border-color: var(--primary-blue-light);
+    box-shadow: 0 0 0 3px rgba(53, 132, 228, 0.2);
+}
+
+/* Dataframe (grid arrow mengikuti variabel tema Streamlit) */
+.stDataFrame {
+    background: var(--secondary-background-color);
+}
+
+/* === Chart Plotly (fallback; warna detail diatur via JS theme) === */
+.js-plotly-plot {
+    background: var(--card-bg);
+}
+
+/* === Divider & tooltip === */
+.section-divider {
+    background: linear-gradient(90deg, transparent, var(--primary-blue-light), transparent);
+}
+
+/* Catatan: styling widget sidebar (selalu dark) ada di custom_styles.css */

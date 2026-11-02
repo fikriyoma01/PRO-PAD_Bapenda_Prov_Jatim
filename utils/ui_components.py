@@ -196,13 +196,13 @@ def render_progress_indicator(current: int, total: int, label: str = "Progress")
     st.markdown(f"""
     <div style="margin: 1rem 0;">
         <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-            <span style="font-weight: 600; color: #2c3e50;">{label}</span>
-            <span style="font-weight: 600; color: #1a5fb4;">{current}/{total} ({percentage:.0f}%)</span>
+            <span style="font-weight: 600; color: var(--text-dark);">{label}</span>
+            <span style="font-weight: 600; color: var(--primary-blue);">{current}/{total} ({percentage:.0f}%)</span>
         </div>
         <div style="
             width: 100%;
             height: 12px;
-            background: #e9ecef;
+            background: var(--gray-medium);
             border-radius: 10px;
             overflow: hidden;
         ">
@@ -230,8 +230,8 @@ def render_feature_card(icon: str, title: str, description: str):
     st.markdown(f"""
     <div class="modern-card" style="text-align: center;">
         <div style="font-size: 3rem; margin-bottom: 1rem;">{icon}</div>
-        <h3 style="color: #1a5fb4; margin-bottom: 0.5rem;">{title}</h3>
-        <p style="color: #6c757d;">{description}</p>
+        <h3 style="color: var(--primary-blue); margin-bottom: 0.5rem;">{title}</h3>
+        <p style="color: var(--text-muted);">{description}</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -246,15 +246,15 @@ def render_comparison_table(data: dict, title: str = "Comparison"):
     """
     st.markdown(f"""
     <div class="modern-card">
-        <h3 style="color: #1a5fb4; margin-bottom: 1.5rem;">{title}</h3>
+        <h3 style="color: var(--primary-blue); margin-bottom: 1.5rem;">{title}</h3>
         <table style="width: 100%; border-collapse: collapse;">
             <thead>
-                <tr style="background: #f8f9fa; border-bottom: 2px solid #1a5fb4;">
+                <tr style="background: var(--gray-light); border-bottom: 2px solid var(--primary-blue);">
                     {''.join([f'<th style="padding: 1rem; text-align: left; font-weight: 600;">{col}</th>' for col in data.keys()])}
                 </tr>
             </thead>
             <tbody>
-                {''.join([f'<tr style="border-bottom: 1px solid #e9ecef;"><td style="padding: 1rem;">{val}</td></tr>' for val in data.values()])}
+                {''.join([f'<tr style="border-bottom: 1px solid var(--gray-medium);"><td style="padding: 1rem;">{val}</td></tr>' for val in data.values()])}
             </tbody>
         </table>
     </div>

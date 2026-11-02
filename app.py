@@ -2,6 +2,7 @@
 import importlib
 from utils.audit_utils import initialize_session
 from utils.ui_components import load_custom_css
+from utils.theme_mode import apply_theme_mode, render_theme_toggle
 
 # --- Konfigurasi halaman
 st.set_page_config(
@@ -16,6 +17,9 @@ initialize_session()
 
 # --- Load custom CSS
 load_custom_css()
+
+# --- Apply theme mode (auto = ikuti prefers-color-scheme browser client)
+apply_theme_mode()
 
 # --- Daftar halaman
 PAGES = {
@@ -128,6 +132,10 @@ def render_sidebar():
     <div class="sidebar-subtitle">Proyeksi & Analisis</div>
     ''', unsafe_allow_html=True)
 
+    # --- Toggle tema (Auto / Light / Dark)
+    render_theme_toggle()
+    st.sidebar.markdown("---")
+
     for label in PAGES:
         if st.sidebar.button(label, key=f"nav_{label}"):
             st.session_state.current_page = label
@@ -146,7 +154,7 @@ def render_sidebar():
 st.markdown("""
 <style>
     .main-container {
-        background-color: #ffffff;
+        background-color: var(--card-bg);
         padding: 2rem;
         border-radius: 12px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
