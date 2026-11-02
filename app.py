@@ -18,9 +18,6 @@ initialize_session()
 # --- Load custom CSS
 load_custom_css()
 
-# --- Apply theme mode (auto = ikuti prefers-color-scheme browser client)
-apply_theme_mode()
-
 # --- Daftar halaman
 PAGES = {
     "🏠 Home": "home",
@@ -178,6 +175,11 @@ try:
         st.markdown('<div class="main-container">', unsafe_allow_html=True)
         module.app()
         st.markdown('</div>', unsafe_allow_html=True)
+
+    # --- Apply theme mode DI AKHIR agar CSS dark menang di cascade
+    #     (halaman meng-inject CSS sendiri dengan !important; auto =
+    #      ikuti prefers-color-scheme browser client)
+    apply_theme_mode()
 
 except ImportError as e:
     st.error(f"⚠️ Failed to load page module: {e}")

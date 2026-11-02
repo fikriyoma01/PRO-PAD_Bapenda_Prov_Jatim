@@ -225,21 +225,21 @@ def show_home_page():
     st.markdown("""
     <div class="modern-card">
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
-            <div style="padding: 1.5rem; border-left: 4px solid #1a5fb4; background: #f8f9fa; border-radius: 8px;">
+            <div style="padding: 1.5rem; border-left: 4px solid #1a5fb4; background: var(--gray-light); border-radius: 8px;">
                 <h3 style="color: #1a5fb4; margin: 0 0 0.5rem 0;">📄 Dataset</h3>
-                <p style="color: #6c757d; margin: 0; font-size: 0.95rem;">Lihat data historis, correlation heatmap, dan statistik deskriptif</p>
+                <p style="color: var(--text-muted); margin: 0; font-size: 0.95rem;">Lihat data historis, correlation heatmap, dan statistik deskriptif</p>
             </div>
-            <div style="padding: 1.5rem; border-left: 4px solid #4caf50; background: #f8f9fa; border-radius: 8px;">
+            <div style="padding: 1.5rem; border-left: 4px solid #4caf50; background: var(--gray-light); border-radius: 8px;">
                 <h3 style="color: #4caf50; margin: 0 0 0.5rem 0;">📊 Pemodelan</h3>
-                <p style="color: #6c757d; margin: 0; font-size: 0.95rem;">Regresi, validation metrics, dan sensitivity analysis</p>
+                <p style="color: var(--text-muted); margin: 0; font-size: 0.95rem;">Regresi, validation metrics, dan sensitivity analysis</p>
             </div>
-            <div style="padding: 1.5rem; border-left: 4px solid #ff9800; background: #f8f9fa; border-radius: 8px;">
+            <div style="padding: 1.5rem; border-left: 4px solid #ff9800; background: var(--gray-light); border-radius: 8px;">
                 <h3 style="color: #ff9800; margin: 0 0 0.5rem 0;">📈 Proyeksi</h3>
-                <p style="color: #6c757d; margin: 0; font-size: 0.95rem;">Proyeksi 2025-2026 dengan CI dan ensemble models</p>
+                <p style="color: var(--text-muted); margin: 0; font-size: 0.95rem;">Proyeksi 2025-2026 dengan CI dan ensemble models</p>
             </div>
-            <div style="padding: 1.5rem; border-left: 4px solid #8e24aa; background: #f8f9fa; border-radius: 8px;">
+            <div style="padding: 1.5rem; border-left: 4px solid #8e24aa; background: var(--gray-light); border-radius: 8px;">
                 <h3 style="color: #8e24aa; margin: 0 0 0.5rem 0;">🎯 Scenario Builder</h3>
-                <p style="color: #6c757d; margin: 0; font-size: 0.95rem;">What-if analysis interaktif dengan multiple scenarios</p>
+                <p style="color: var(--text-muted); margin: 0; font-size: 0.95rem;">What-if analysis interaktif dengan multiple scenarios</p>
             </div>
         </div>
     </div>

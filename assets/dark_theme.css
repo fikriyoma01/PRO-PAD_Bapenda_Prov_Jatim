@@ -195,14 +195,292 @@ File ini TIDAK boleh berisi @media lain (akan dibungkus utuh).
     background: var(--secondary-background-color);
 }
 
-/* === Chart Plotly (fallback; warna detail diatur via JS theme) === */
+/* === Chart Plotly (template plotly_white) ===
+   Background putih adalah inline style di .main-svg → perlu !important.
+   Teks SVG memakai atribut fill → CSS menang atas presentation attribute.
+   (Streamlit 1.45 men-strip <script> di markdown, jadi theming via CSS saja) */
 .js-plotly-plot {
     background: var(--card-bg);
+}
+
+.js-plotly-plot .main-svg {
+    background: transparent !important;
+}
+
+.js-plotly-plot text {
+    fill: #c3cad5 !important;
+}
+
+.js-plotly-plot .title text,
+.js-plotly-plot .gtitle text,
+.js-plotly-plot .legend text {
+    fill: #e2e8f0 !important;
+}
+
+.js-plotly-plot .legend .bg {
+    fill: rgba(26, 34, 51, 0.9) !important;
+    stroke: #2d3748 !important;
+}
+
+.js-plotly-plot .gridline {
+    stroke: rgba(255, 255, 255, 0.15);
 }
 
 /* === Divider & tooltip === */
 .section-divider {
     background: linear-gradient(90deg, transparent, var(--primary-blue-light), transparent);
+}
+
+/* =====================================================
+   STREAMLIT 1.45 CORE WIDGETS — explicit overrides
+   Streamlit 1.45 membakar warna tema ke CSS emotion (literal hex),
+   TIDAK memakai variabel :root — jadi perlu override per elemen.
+   Semua pakai !important untuk mengalahkan CSS halaman.
+   ===================================================== */
+
+/* Top bar (header) */
+[data-testid="stHeader"] {
+    background-color: #0f1420 !important;
+}
+
+[data-testid="stHeader"] * {
+    color: #e2e8f0 !important;
+}
+
+/* Tombol navigasi sidebar: tombol putih, teks harus gelap
+   (div label di dalamnya memakai var(--text-color) yang jadi terang di dark mode) */
+section[data-testid="stSidebar"] .stButton > button,
+section[data-testid="stSidebar"] .stButton > button * {
+    color: #0f2027 !important;
+}
+
+/* Label widget (selectbox, number input, slider, dll) */
+[data-testid="stWidgetLabel"],
+[data-testid="stWidgetLabel"] * {
+    color: #e2e8f0 !important;
+}
+
+/* st.metric */
+[data-testid="stMetric"] {
+    background: transparent !important;
+}
+
+[data-testid="stMetricLabel"],
+[data-testid="stMetricLabel"] * {
+    color: #9aa4b2 !important;
+}
+
+[data-testid="stMetricValue"],
+[data-testid="stMetricValue"] * {
+    color: #e2e8f0 !important;
+}
+
+[data-testid="stMetricDelta"],
+[data-testid="stMetricDelta"] * {
+    color: #c3cad5 !important;
+}
+
+/* st.caption & st.text */
+[data-testid="stCaptionContainer"],
+[data-testid="stCaptionContainer"] * {
+    color: #9aa4b2 !important;
+}
+
+[data-testid="stText"] {
+    color: #e2e8f0 !important;
+}
+
+/* st.info / st.success / st.warning / st.error */
+[data-baseweb="notification"] {
+    background-color: rgba(255, 255, 255, 0.07) !important;
+    border: 1px solid #2d3748 !important;
+}
+
+[data-testid="stAlert"] [data-testid="stMarkdownContainer"],
+[data-testid="stAlert"] [data-testid="stMarkdownContainer"] * {
+    color: #e2e8f0 !important;
+}
+
+/* st.dataframe (grid arrow: baris transparan di atas container gelap) */
+[data-testid="stDataCell"],
+[data-testid="stDataColumnHeader"],
+[data-testid="stDataFrame"] td,
+[data-testid="stDataFrame"] th {
+    color: #d6dae3 !important;
+}
+
+[data-testid="stDataColumnHeader"] {
+    background-color: #232c3d !important;
+}
+
+/* st.dataframe: grid dirender ke <canvas> (glide-data-grid) —
+   CSS tidak bisa mengubah isi canvas, jadi warna di-invert
+   (bg putih → gelap, teks gelap → terang). Sel berwarna (Styler)
+   ikut ter-invert tapi tetap terdiferensiasi. */
+[data-testid="stDataFrame"] canvas {
+    filter: invert(0.92) hue-rotate(180deg) !important;
+}
+
+/* st.table */
+[data-testid="stTable"] {
+    background: #1a2233 !important;
+}
+
+[data-testid="stTable"] th {
+    background-color: #232c3d !important;
+    color: #e2e8f0 !important;
+}
+
+[data-testid="stTable"] td {
+    color: #d6dae3 !important;
+    border-color: #2d3748 !important;
+}
+
+/* st.code & st.json */
+[data-testid="stCodeBlock"] {
+    background-color: #161d2e !important;
+}
+
+[data-testid="stCodeBlock"] pre,
+[data-testid="stCodeBlock"] code {
+    color: #d6dae3 !important;
+}
+
+[data-testid="stJson"] {
+    background-color: #161d2e !important;
+    color: #d6dae3 !important;
+}
+
+/* st.checkbox / st.radio / st.toggle */
+[data-testid="stCheckbox"] label,
+[data-testid="stRadio"] label,
+[data-testid="stToggle"] label {
+    color: #e2e8f0 !important;
+}
+
+/* st.form */
+[data-testid="stForm"] {
+    background-color: #1a2233 !important;
+    border-color: #2d3748 !important;
+}
+
+/* st.file_uploader */
+[data-testid="stFileUploader"] {
+    background-color: #1a2233 !important;
+    border-color: #2d3748 !important;
+}
+
+[data-testid="stFileUploader"] * {
+    color: #e2e8f0 !important;
+}
+
+/* st.download_button */
+[data-testid="stDownloadButton"] button {
+    background-color: #1a2233 !important;
+    border: 1px solid #2d3748 !important;
+    color: #e2e8f0 !important;
+}
+
+/* st.progress (track) */
+[data-testid="stProgress"] > div {
+    background-color: #232c3d !important;
+}
+
+/* st.status */
+[data-testid="stStatus"] {
+    background-color: #1a2233 !important;
+    border-color: #2d3748 !important;
+    color: #e2e8f0 !important;
+}
+
+/* baseweb select — selector & specificity sama dengan CSS halaman */
+div[data-baseweb="select"] > div {
+    background-color: #1a2233 !important;
+    border-color: #2d3748 !important;
+}
+
+div[data-baseweb="select"] > div:hover {
+    background-color: #232c3d !important;
+}
+
+div[data-baseweb="select"] > div,
+div[data-baseweb="select"] > div * {
+    color: #e2e8f0 !important;
+}
+
+/* dropdown menu (portal baseweb) */
+[data-baseweb="overlay"] {
+    background: #1a2233 !important;
+}
+
+[data-baseweb="menu"] {
+    background-color: #1a2233 !important;
+}
+
+[data-baseweb="menu"] * {
+    color: #e2e8f0 !important;
+}
+
+/* tooltip baseweb */
+[data-baseweb="tooltip"] {
+    background-color: #2d3748 !important;
+    color: #e2e8f0 !important;
+}
+
+/* =====================================================
+   KOMPONEN KHUSUS HALAMAN — varian dark
+   (halaman meng-inject CSS light dengan !important;
+    file ini di-inject SETELAH halaman sehingga menang)
+   ===================================================== */
+
+/* datasets.py: kartu pastel */
+.metric-low {
+    background: linear-gradient(135deg, rgba(255, 152, 0, 0.28), rgba(255, 152, 0, 0.12)) !important;
+}
+
+.metric-avg {
+    background: linear-gradient(135deg, rgba(30, 136, 229, 0.28), rgba(30, 136, 229, 0.12)) !important;
+}
+
+.metric-high {
+    background: linear-gradient(135deg, rgba(67, 160, 71, 0.28), rgba(67, 160, 71, 0.12)) !important;
+}
+
+.metric-card h4,
+.metric-card p {
+    color: #e2e8f0 !important;
+}
+
+/* pemodelan/dekomposisi/insight/proyeksi: note box */
+.note-box {
+    background: rgba(251, 192, 43, 0.15) !important;
+    color: #e2e8f0 !important;
+}
+
+/* metodologi.py */
+.formula-box {
+    background: #161d2e !important;
+    color: #d6dae3 !important;
+    border-color: #1976d2 !important;
+}
+
+.warning-box {
+    background: rgba(255, 193, 7, 0.15) !important;
+    color: #e2e8f0 !important;
+}
+
+.info-box {
+    background: rgba(23, 162, 184, 0.15) !important;
+    color: #e2e8f0 !important;
+}
+
+/* hkpd.py: metric container */
+div[data-testid="metric-container"] {
+    background: rgba(30, 60, 114, 0.35) !important;
+}
+
+div[data-testid="metric-container"] label {
+    color: #e2e8f0 !important;
 }
 
 /* Catatan: styling widget sidebar (selalu dark) ada di custom_styles.css */

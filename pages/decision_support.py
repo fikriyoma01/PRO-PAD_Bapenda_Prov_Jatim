@@ -361,14 +361,14 @@ def show_decision_support_page():
         # Risk matrix
         df_risks = create_risk_matrix()
 
-        # Color coding
+        # Color coding (warna self-contained: bg + teks, terbaca di light & dark mode)
         def color_probability(val):
             if val == 'High':
-                return 'background-color: #ffcdd2'
+                return 'background-color: #c62828; color: white'
             elif val == 'Medium':
-                return 'background-color: #fff9c4'
+                return 'background-color: #e65100; color: white'
             else:
-                return 'background-color: #c8e6c9'
+                return 'background-color: #2e7d32; color: white'
 
         styled_df = df_risks.style.applymap(
             color_probability,
