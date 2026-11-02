@@ -1,13 +1,14 @@
 [server]
 headless = true
 
+[browser]
+gatherUsageStats = false
+
 [theme]
 base = "light"
 
 [client]
 showSidebarNavigation = false
 
-[general]
-pageTitle = "Multi-Page App"
-pageIcon = "📚"
-target = "app.py"
+# Catatan: pageTitle/pageIcon diset via st.set_page_config di app.py
+# (bukan config option — section [general] lama dihapus karena invalid)

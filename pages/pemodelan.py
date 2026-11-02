@@ -199,7 +199,11 @@ def show_modeling_page():
 
     # Detail summary
     with st.expander("🔍 Detail Summary Model"):
-        st.text(model.summary())
+        # omni_normtest di summary() memunculkan ValueWarning saat n<8 (data 7 tahun)
+        import warnings as _warnings
+        with _warnings.catch_warnings():
+            _warnings.simplefilter("ignore")
+            st.text(model.summary())
 
     # Visualisasi scatter + regresi
     st.subheader("📈 Visualisasi Scatterplot dengan Garis Regresi")

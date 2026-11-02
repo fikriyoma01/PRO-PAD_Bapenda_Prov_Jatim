@@ -370,7 +370,7 @@ def show_decision_support_page():
             else:
                 return 'background-color: #2e7d32; color: white'
 
-        styled_df = df_risks.style.applymap(
+        styled_df = df_risks.style.map(
             color_probability,
             subset=['probability', 'impact']
         )
