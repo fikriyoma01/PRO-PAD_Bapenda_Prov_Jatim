@@ -11,6 +11,8 @@ from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
 import statsmodels.api as sm
 
+from utils.ui_theme_utils import format_rupiah_compact
+
 # Suppress warnings for cleaner output
 warnings.filterwarnings('ignore')
 
@@ -276,8 +278,8 @@ def compare_models(results: Dict, actual_values: Optional[pd.Series] = None) -> 
 
         row = {
             'Model': model_result.get('model', model_name),
-            'Forecast 2025': f"Rp {model_result['forecast'][0]/1e9:.2f}T",
-            'Forecast 2026': f"Rp {model_result['forecast'][1]/1e9:.2f}T" if len(model_result['forecast']) > 1 else 'N/A',
+            'Proyeksi 2025': format_rupiah_compact(model_result['forecast'][0]),
+            'Proyeksi 2026': format_rupiah_compact(model_result['forecast'][1]) if len(model_result['forecast']) > 1 else 'N/A',
         }
 
         # Add model-specific metrics

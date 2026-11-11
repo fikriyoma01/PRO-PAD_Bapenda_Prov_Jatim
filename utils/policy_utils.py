@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Dict, Any
 
 
-CONFIG_FILE = Path("config/policy_settings.json")
+CONFIG_FILE = Path(__file__).resolve().parent.parent / "config" / "policy_settings.json"
 
 
 def get_policy_settings() -> Dict[str, Any]:

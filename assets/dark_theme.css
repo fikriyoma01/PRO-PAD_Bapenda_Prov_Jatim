@@ -1,41 +1,48 @@
 /*
 =====================================================
-PRO-PAD Dashboard - Dark Theme
+PRO-PAD Dashboard — Dark Theme Overrides
 Diterapkan saat:
   - theme mode = "dark" (paksa), ATAU
-  - theme mode = "auto" DAN client (Chrome) memilih dark
+  - theme mode = "auto" DAN client memilih dark
     (dibungkus @media (prefers-color-scheme: dark) oleh utils/theme_mode.py)
-File ini TIDAK boleh berisi @media lain (akan dibungkus utuh).
+File ini TIDAK boleh berisi @media atau @import lain.
 =====================================================
 */
 
-/* === Variabel tema (custom + Streamlit core) === */
 :root,
 [data-testid="stTheme"] {
-    /* Custom surfaces */
-    --app-bg: linear-gradient(135deg, #0f1420 0%, #161d2e 100%);
-    --card-bg: #1a2233;
-    --card-border: rgba(255, 255, 255, 0.08);
-    --gray-light: #1e2637;
-    --gray-medium: #2d3748;
-    --text-dark: #e2e8f0;
-    --text-muted: #9aa4b2;
+    /* Custom Design Tokens */
+    --app-bg: linear-gradient(150deg, #0b1120 0%, #111827 100%);
+    --card-bg: #172033;
+    --card-border: rgba(148, 163, 184, 0.14);
+    --gray-light: #1e293b;
+    --gray-medium: #334155;
+    --text-dark: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+    --heading-accent: #60a5fa;
+    --kpi-value-color: #f8fafc;
+    --shadow-card: 0 8px 24px rgba(2, 6, 23, 0.42);
 
-    /* Streamlit core theme variables */
-    --background-color: #0f1420;
-    --secondary-background-color: #1a2233;
-    --text-color: #e2e8f0;
-    --font-color: #c3cad5;
-    --header-color: #e2e8f0;
-    --border-color: #2d3748;
-    --edge-color: #232c3d;
-    --primary-color: #3584e4;
-    --primary-background: rgba(53, 132, 228, 0.15);
-    --text-selection-color: rgba(53, 132, 228, 0.4);
+    /* Streamlit Core Theme Variables */
+    --background-color: #0b1120;
+    --secondary-background-color: #172033;
+    --text-color: #f1f5f9;
+    --font-color: #cbd5e1;
+    --header-color: #f8fafc;
+    --border-color: #334155;
+    --edge-color: #1e293b;
+    --primary-color: #3b82f6;
+    --primary-background: rgba(59, 130, 246, 0.16);
+    --text-selection-color: rgba(59, 130, 246, 0.4);
     --table-row-hover-background: rgba(255, 255, 255, 0.05);
 }
 
-/* === Surface utama === */
+.propad-watermark {
+    color: rgba(248, 250, 252, 0.05);
+}
+
+/* === Surface Utama === */
 .stApp {
     background: var(--app-bg) !important;
 }
@@ -44,13 +51,15 @@ File ini TIDAK boleh berisi @media lain (akan dibungkus utuh).
     background: var(--background-color);
 }
 
-/* Container utama halaman (app.py) */
-.main-container {
-    background-color: var(--card-bg) !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35) !important;
+[data-testid="stHeader"] {
+    background-color: #0b1120 !important;
 }
 
-/* Teks & heading markdown (spesifisitas rendah agar tidak menimpa .gradient-header) */
+[data-testid="stHeader"] * {
+    color: #f1f5f9 !important;
+}
+
+/* === Typography & Headings === */
 [data-testid="stMarkdownContainer"] {
     color: var(--text-color);
 }
@@ -60,427 +69,365 @@ File ini TIDAK boleh berisi @media lain (akan dibungkus utuh).
 }
 
 [data-testid="stMarkdownContainer"] p,
-[data-testid="stMarkdownContainer"] li,
-[data-testid="stMarkdownContainer"] span {
+[data-testid="stMarkdownContainer"] li {
     color: var(--text-color);
 }
 
-/* === Komponen custom === */
-.modern-card {
-    background: var(--card-bg);
-    border: 1px solid var(--card-border);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+.gradient-header h1 {
+    color: #ffffff !important;
 }
 
-.modern-card:hover {
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+.gradient-header p {
+    color: rgba(241, 245, 249, 0.92) !important;
+}
+
+.section-heading,
+.section-heading span,
+.insight-section-title,
+.section-title {
+    color: #60a5fa !important;
+}
+
+.feature-card-title {
+    color: #93c5fd !important;
+}
+
+.feature-card-desc,
+.section-heading-sub {
+    color: #94a3b8 !important;
+}
+
+.feature-card-icon {
+    background: rgba(59, 130, 246, 0.18);
+}
+
+/* === Cards & Bordered Containers === */
+.modern-card,
+.feature-card,
+.section-card,
+.scenario-card,
+.stat-card,
+[data-testid="stMain"] [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlockBorderWrapper"] {
+    background: var(--card-bg) !important;
+    border-color: var(--card-border) !important;
+    box-shadow: var(--shadow-card) !important;
 }
 
 .metric-card {
-    background: var(--card-bg);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
-}
-
-.metric-card:hover {
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+    background: var(--card-bg) !important;
+    border-color: var(--card-border) !important;
+    box-shadow: var(--shadow-card) !important;
 }
 
 .metric-card .metric-label {
-    color: var(--text-muted);
+    color: #94a3b8 !important;
+}
+
+.metric-card .metric-value {
+    color: #f8fafc !important;
 }
 
 .metric-delta.positive {
-    background: rgba(76, 175, 80, 0.18);
-    color: #81c784;
+    background: rgba(16, 185, 129, 0.2);
+    color: #6ee7b7 !important;
 }
 
 .metric-delta.negative {
-    background: rgba(239, 83, 80, 0.18);
-    color: #e57373;
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5 !important;
 }
 
+.metric-delta.neutral {
+    background: rgba(59, 130, 246, 0.2);
+    color: #93c5fd !important;
+}
+
+/* === Callout / Alert / Formula Boxes === */
 .info-box {
-    background: linear-gradient(135deg, rgba(26, 95, 180, 0.30) 0%, rgba(53, 132, 228, 0.18) 100%);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(135deg, rgba(30, 64, 175, 0.32) 0%, rgba(37, 99, 235, 0.18) 100%) !important;
+    color: #e2e8f0 !important;
 }
 
-.warning-box {
-    background: linear-gradient(135deg, rgba(255, 152, 0, 0.25) 0%, rgba(255, 152, 0, 0.12) 100%);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+.warning-box,
+.note-box {
+    background: linear-gradient(135deg, rgba(180, 83, 9, 0.28) 0%, rgba(245, 158, 11, 0.14) 100%) !important;
+    color: #f1f5f9 !important;
+}
+
+.note-box strong {
+    color: #fbbf24 !important;
 }
 
 .success-box {
-    background: linear-gradient(135deg, rgba(76, 175, 80, 0.25) 0%, rgba(76, 175, 80, 0.12) 100%);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(135deg, rgba(6, 95, 70, 0.34) 0%, rgba(16, 185, 129, 0.16) 100%) !important;
+    color: #e2e8f0 !important;
 }
 
 .danger-box {
-    background: linear-gradient(135deg, rgba(239, 83, 80, 0.25) 0%, rgba(239, 83, 80, 0.12) 100%);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(135deg, rgba(153, 27, 27, 0.34) 0%, rgba(239, 68, 68, 0.16) 100%) !important;
+    color: #e2e8f0 !important;
+}
+
+.formula-box {
+    background: #0f172a !important;
+    color: #e2e8f0 !important;
+    border-color: rgba(96, 165, 250, 0.45) !important;
 }
 
 .badge-primary {
-    background: rgba(53, 132, 228, 0.2);
-    color: #64b5f6;
+    background: rgba(59, 130, 246, 0.22);
+    color: #93c5fd;
 }
 
 .badge-success {
-    background: rgba(76, 175, 80, 0.2);
-    color: #81c784;
+    background: rgba(16, 185, 129, 0.22);
+    color: #6ee7b7;
 }
 
 .badge-warning {
-    background: rgba(255, 152, 0, 0.2);
-    color: #ffb74d;
+    background: rgba(245, 158, 11, 0.22);
+    color: #fcd34d;
 }
 
 .badge-danger {
-    background: rgba(239, 83, 80, 0.2);
-    color: #e57373;
+    background: rgba(239, 68, 68, 0.22);
+    color: #fca5a5;
 }
 
-/* === Widget Streamlit === */
-.streamlit-expanderHeader {
-    background: var(--card-bg);
-    border: 2px solid var(--border-color);
-    color: var(--text-dark);
+/* === Main Content Buttons === */
+[data-testid="stMain"] div.stButton > button:not([kind="primary"]) {
+    background: #1e293b !important;
+    color: #f1f5f9 !important;
+    border-color: #334155 !important;
 }
 
-.streamlit-expanderHeader:hover {
-    background: rgba(53, 132, 228, 0.08);
+[data-testid="stMain"] div.stButton > button:not([kind="primary"]) * {
+    color: #f1f5f9 !important;
 }
 
-.streamlit-expanderContent {
-    border: 2px solid var(--border-color);
-    background: var(--card-bg);
+[data-testid="stMain"] div.stButton > button:not([kind="primary"]):hover {
+    background: #273549 !important;
+    border-color: #60a5fa !important;
 }
 
-.stTabs [data-baseweb="tab-list"] {
-    background: var(--card-bg);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+/* === Sidebar Navigation Protection in Dark Mode === */
+section[data-testid="stSidebar"] .stButton > button:not([kind="primary"]),
+section[data-testid="stSidebar"] .stButton > button:not([kind="primary"]) * {
+    color: rgba(248, 250, 252, 0.92) !important;
 }
 
-.stTabs [data-baseweb="tab"] {
-    color: var(--text-dark);
+section[data-testid="stSidebar"] .stButton > button[kind="primary"],
+section[data-testid="stSidebar"] .stButton > button[kind="primary"] * {
+    color: #0b192c !important;
 }
 
-.stTabs [data-baseweb="tab"]:hover {
-    background-color: rgba(53, 132, 228, 0.12);
+section[data-testid="stSidebar"] div[data-baseweb="select"] > div {
+    background-color: rgba(255, 255, 255, 0.09) !important;
+    border-color: rgba(255, 255, 255, 0.22) !important;
 }
 
-.stSelectbox > div > div,
-.stRadio > div,
-.stNumberInput > div > div > input,
-.stTextInput > div > div > input,
-.stTextArea > div > div > textarea,
-.stMultiSelect > div > div {
-    background-color: var(--secondary-background-color);
-    border-color: var(--border-color);
-    color: var(--text-color);
-}
-
-[data-baseweb="select"] > div,
-[data-baseweb="select"] span {
-    color: var(--text-color);
-}
-
-.stNumberInput > div > div > input:focus,
-.stTextInput > div > div > input:focus {
-    border-color: var(--primary-blue-light);
-    box-shadow: 0 0 0 3px rgba(53, 132, 228, 0.2);
-}
-
-/* Dataframe (grid arrow mengikuti variabel tema Streamlit) */
-.stDataFrame {
-    background: var(--secondary-background-color);
-}
-
-/* === Chart Plotly (template plotly_white) ===
-   Background putih adalah inline style di .main-svg → perlu !important.
-   Teks SVG memakai atribut fill → CSS menang atas presentation attribute.
-   (Streamlit 1.45 men-strip <script> di markdown, jadi theming via CSS saja) */
+/* === Plotly Charts === */
 .js-plotly-plot {
-    background: var(--card-bg);
+    background: var(--card-bg) !important;
+    border-color: var(--card-border) !important;
+}
+
+[data-testid="stMain"] [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlockBorderWrapper"] .js-plotly-plot {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 
 .js-plotly-plot .main-svg {
     background: transparent !important;
 }
 
-.js-plotly-plot text {
-    fill: #c3cad5 !important;
+.js-plotly-plot :not(.delta) > text {
+    fill: #cbd5e1 !important;
 }
 
+.js-plotly-plot .numbers text,
 .js-plotly-plot .title text,
 .js-plotly-plot .gtitle text,
 .js-plotly-plot .legend text {
-    fill: #e2e8f0 !important;
+    fill: #f1f5f9 !important;
 }
 
 .js-plotly-plot .legend .bg {
-    fill: rgba(26, 34, 51, 0.9) !important;
-    stroke: #2d3748 !important;
+    fill: rgba(15, 23, 42, 0.85) !important;
+    stroke: #334155 !important;
 }
 
 .js-plotly-plot .gridline {
-    stroke: rgba(255, 255, 255, 0.15);
+    stroke: rgba(148, 163, 184, 0.16) !important;
 }
 
-/* === Divider & tooltip === */
-.section-divider {
-    background: linear-gradient(90deg, transparent, var(--primary-blue-light), transparent);
-}
-
-/* =====================================================
-   STREAMLIT 1.45 CORE WIDGETS — explicit overrides
-   Streamlit 1.45 membakar warna tema ke CSS emotion (literal hex),
-   TIDAK memakai variabel :root — jadi perlu override per elemen.
-   Semua pakai !important untuk mengalahkan CSS halaman.
-   ===================================================== */
-
-/* Top bar (header) */
-[data-testid="stHeader"] {
-    background-color: #0f1420 !important;
-}
-
-[data-testid="stHeader"] * {
+/* === Streamlit 1.45 Core Widgets === */
+[data-testid="stMain"] [data-testid="stWidgetLabel"],
+[data-testid="stMain"] [data-testid="stWidgetLabel"] * {
     color: #e2e8f0 !important;
 }
 
-/* Tombol navigasi sidebar: tombol putih, teks harus gelap
-   (div label di dalamnya memakai var(--text-color) yang jadi terang di dark mode) */
-section[data-testid="stSidebar"] .stButton > button,
-section[data-testid="stSidebar"] .stButton > button * {
-    color: #0f2027 !important;
-}
-
-/* Label widget (selectbox, number input, slider, dll) */
-[data-testid="stWidgetLabel"],
-[data-testid="stWidgetLabel"] * {
-    color: #e2e8f0 !important;
-}
-
-/* st.metric */
 [data-testid="stMetric"] {
-    background: transparent !important;
+    background: var(--card-bg) !important;
+    border-color: var(--card-border) !important;
 }
 
 [data-testid="stMetricLabel"],
 [data-testid="stMetricLabel"] * {
-    color: #9aa4b2 !important;
+    color: #94a3b8 !important;
 }
 
 [data-testid="stMetricValue"],
 [data-testid="stMetricValue"] * {
-    color: #e2e8f0 !important;
+    color: #f8fafc !important;
 }
 
-[data-testid="stMetricDelta"],
-[data-testid="stMetricDelta"] * {
-    color: #c3cad5 !important;
-}
-
-/* st.caption & st.text */
 [data-testid="stCaptionContainer"],
 [data-testid="stCaptionContainer"] * {
-    color: #9aa4b2 !important;
+    color: #94a3b8 !important;
 }
 
 [data-testid="stText"] {
     color: #e2e8f0 !important;
 }
 
-/* st.info / st.success / st.warning / st.error */
+/* Expanders & Tabs */
+[data-testid="stExpander"] {
+    background: var(--card-bg) !important;
+    border-color: var(--card-border) !important;
+}
+
+[data-testid="stExpander"] summary,
+[data-testid="stExpander"] summary * {
+    color: #f1f5f9 !important;
+}
+
+.stTabs [data-baseweb="tab-list"] {
+    background: #0f172a !important;
+    border-color: var(--card-border) !important;
+}
+
+.stTabs [data-baseweb="tab"] {
+    color: #cbd5e1 !important;
+}
+
+.stTabs [data-baseweb="tab"] * {
+    color: #cbd5e1 !important;
+}
+
+.stTabs [aria-selected="true"],
+.stTabs [aria-selected="true"] * {
+    color: #ffffff !important;
+}
+
+/* Inputs & Selects */
+[data-testid="stMain"] div[data-baseweb="select"] > div,
+.stNumberInput > div > div > input,
+.stTextInput > div > div > input,
+.stTextArea > div > div > textarea,
+.stMultiSelect > div > div {
+    background-color: #0f172a !important;
+    border-color: #334155 !important;
+    color: #f1f5f9 !important;
+}
+
+[data-testid="stMain"] div[data-baseweb="select"] > div * {
+    color: #f1f5f9 !important;
+}
+
+[data-baseweb="overlay"],
+[data-baseweb="menu"] {
+    background-color: #172033 !important;
+}
+
+[data-baseweb="menu"] * {
+    color: #f1f5f9 !important;
+}
+
+[data-baseweb="tooltip"] {
+    background-color: #1e293b !important;
+    color: #f1f5f9 !important;
+}
+
+/* Notifications / Alerts */
 [data-baseweb="notification"] {
-    background-color: rgba(255, 255, 255, 0.07) !important;
-    border: 1px solid #2d3748 !important;
+    background-color: rgba(30, 41, 59, 0.85) !important;
+    border: 1px solid #334155 !important;
 }
 
 [data-testid="stAlert"] [data-testid="stMarkdownContainer"],
 [data-testid="stAlert"] [data-testid="stMarkdownContainer"] * {
-    color: #e2e8f0 !important;
+    color: #f1f5f9 !important;
 }
 
-/* st.dataframe (grid arrow: baris transparan di atas container gelap) */
-[data-testid="stDataCell"],
-[data-testid="stDataColumnHeader"],
-[data-testid="stDataFrame"] td,
-[data-testid="stDataFrame"] th {
-    color: #d6dae3 !important;
+/* DataFrames & Tables */
+.stDataFrame {
+    background: #172033 !important;
+    border-color: #334155 !important;
 }
 
-[data-testid="stDataColumnHeader"] {
-    background-color: #232c3d !important;
-}
-
-/* st.dataframe: grid dirender ke <canvas> (glide-data-grid) —
-   CSS tidak bisa mengubah isi canvas, jadi warna di-invert
-   (bg putih → gelap, teks gelap → terang). Sel berwarna (Styler)
-   ikut ter-invert tapi tetap terdiferensiasi. */
 [data-testid="stDataFrame"] canvas {
     filter: invert(0.92) hue-rotate(180deg) !important;
 }
 
-/* st.table */
 [data-testid="stTable"] {
-    background: #1a2233 !important;
+    background: #172033 !important;
 }
 
 [data-testid="stTable"] th {
-    background-color: #232c3d !important;
-    color: #e2e8f0 !important;
+    background-color: #1e293b !important;
+    color: #f1f5f9 !important;
 }
 
 [data-testid="stTable"] td {
-    color: #d6dae3 !important;
-    border-color: #2d3748 !important;
+    color: #cbd5e1 !important;
+    border-color: #334155 !important;
 }
 
-/* st.code & st.json */
-[data-testid="stCodeBlock"] {
-    background-color: #161d2e !important;
+[data-testid="stCodeBlock"],
+[data-testid="stJson"] {
+    background-color: #0f172a !important;
+    color: #e2e8f0 !important;
 }
 
 [data-testid="stCodeBlock"] pre,
 [data-testid="stCodeBlock"] code {
-    color: #d6dae3 !important;
+    color: #e2e8f0 !important;
 }
 
-[data-testid="stJson"] {
-    background-color: #161d2e !important;
-    color: #d6dae3 !important;
+[data-testid="stMarkdownContainer"] :not(pre) > code {
+    background-color: rgba(30, 41, 59, 0.92) !important;
+    color: #93c5fd !important;
+    border: 1px solid rgba(148, 163, 184, 0.24) !important;
+    padding: 0.12rem 0.4rem !important;
+    border-radius: 5px !important;
 }
 
-/* st.checkbox / st.radio / st.toggle */
 [data-testid="stCheckbox"] label,
 [data-testid="stRadio"] label,
 [data-testid="stToggle"] label {
     color: #e2e8f0 !important;
 }
 
-/* st.form */
-[data-testid="stForm"] {
-    background-color: #1a2233 !important;
-    border-color: #2d3748 !important;
-}
-
-/* st.file_uploader */
-[data-testid="stFileUploader"] {
-    background-color: #1a2233 !important;
-    border-color: #2d3748 !important;
+[data-testid="stForm"],
+[data-testid="stFileUploader"],
+[data-testid="stStatus"] {
+    background-color: #172033 !important;
+    border-color: #334155 !important;
 }
 
 [data-testid="stFileUploader"] * {
     color: #e2e8f0 !important;
 }
 
-/* st.download_button */
 [data-testid="stDownloadButton"] button {
-    background-color: #1a2233 !important;
-    border: 1px solid #2d3748 !important;
-    color: #e2e8f0 !important;
+    background-color: #1e293b !important;
+    border: 1px solid #334155 !important;
+    color: #f1f5f9 !important;
 }
 
-/* st.progress (track) */
-[data-testid="stProgress"] > div {
-    background-color: #232c3d !important;
+[data-testid="stDownloadButton"] button:hover {
+    border-color: #60a5fa !important;
+    background-color: #273549 !important;
 }
-
-/* st.status */
-[data-testid="stStatus"] {
-    background-color: #1a2233 !important;
-    border-color: #2d3748 !important;
-    color: #e2e8f0 !important;
-}
-
-/* baseweb select — selector & specificity sama dengan CSS halaman */
-div[data-baseweb="select"] > div {
-    background-color: #1a2233 !important;
-    border-color: #2d3748 !important;
-}
-
-div[data-baseweb="select"] > div:hover {
-    background-color: #232c3d !important;
-}
-
-div[data-baseweb="select"] > div,
-div[data-baseweb="select"] > div * {
-    color: #e2e8f0 !important;
-}
-
-/* dropdown menu (portal baseweb) */
-[data-baseweb="overlay"] {
-    background: #1a2233 !important;
-}
-
-[data-baseweb="menu"] {
-    background-color: #1a2233 !important;
-}
-
-[data-baseweb="menu"] * {
-    color: #e2e8f0 !important;
-}
-
-/* tooltip baseweb */
-[data-baseweb="tooltip"] {
-    background-color: #2d3748 !important;
-    color: #e2e8f0 !important;
-}
-
-/* =====================================================
-   KOMPONEN KHUSUS HALAMAN — varian dark
-   (halaman meng-inject CSS light dengan !important;
-    file ini di-inject SETELAH halaman sehingga menang)
-   ===================================================== */
-
-/* datasets.py: kartu pastel */
-.metric-low {
-    background: linear-gradient(135deg, rgba(255, 152, 0, 0.28), rgba(255, 152, 0, 0.12)) !important;
-}
-
-.metric-avg {
-    background: linear-gradient(135deg, rgba(30, 136, 229, 0.28), rgba(30, 136, 229, 0.12)) !important;
-}
-
-.metric-high {
-    background: linear-gradient(135deg, rgba(67, 160, 71, 0.28), rgba(67, 160, 71, 0.12)) !important;
-}
-
-.metric-card h4,
-.metric-card p {
-    color: #e2e8f0 !important;
-}
-
-/* pemodelan/dekomposisi/insight/proyeksi: note box */
-.note-box {
-    background: rgba(251, 192, 43, 0.15) !important;
-    color: #e2e8f0 !important;
-}
-
-/* metodologi.py */
-.formula-box {
-    background: #161d2e !important;
-    color: #d6dae3 !important;
-    border-color: #1976d2 !important;
-}
-
-.warning-box {
-    background: rgba(255, 193, 7, 0.15) !important;
-    color: #e2e8f0 !important;
-}
-
-.info-box {
-    background: rgba(23, 162, 184, 0.15) !important;
-    color: #e2e8f0 !important;
-}
-
-/* hkpd.py: metric container */
-div[data-testid="metric-container"] {
-    background: rgba(30, 60, 114, 0.35) !important;
-}
-
-div[data-testid="metric-container"] label {
-    color: #e2e8f0 !important;
-}
-
-/* Catatan: styling widget sidebar (selalu dark) ada di custom_styles.css */

@@ -6,6 +6,7 @@ from typing import Dict
 import pandas as pd
 
 DATA_DIR = Path(__file__).resolve().parent / "datasets"
+CUSTOM_HISTORIS = DATA_DIR / "pad_historis_custom.csv"
 
 
 def _read_csv(filename: str) -> pd.DataFrame:
@@ -16,10 +17,21 @@ def _read_csv(filename: str) -> pd.DataFrame:
 
 
 def load_pad_historis() -> pd.DataFrame:
-    """Load historical PAD data from CSV"""
-    df = _read_csv("pad_historis.csv")
-    df = df.rename(columns={"Rasio_Gini": "Rasio Gini"})
-    df = df.rename(columns={"BI7DRR": "Suku Bunga"})
+    """Muat data historis PAD (mendukung data custom jika diaktifkan di Data Editor)."""
+    use_custom = False
+    try:
+        import streamlit as st
+
+        use_custom = bool(st.session_state.get("use_custom_data", False))
+    except Exception:
+        use_custom = False
+
+    if use_custom and CUSTOM_HISTORIS.exists():
+        df = pd.read_csv(CUSTOM_HISTORIS)
+    else:
+        df = _read_csv("pad_historis.csv")
+
+    df = df.rename(columns={"Rasio_Gini": "Rasio Gini", "BI7DRR": "Suku Bunga"})
     df["Tahun"] = df["Tahun"].astype(int)
     return df
 
@@ -58,5 +70,3 @@ def get_bbnkb_inputs(year: int) -> pd.DataFrame:
 
 def map_inputs(df: pd.DataFrame) -> Dict[str, float]:
     return df.set_index("komponen")["nilai"].to_dict()
-
-

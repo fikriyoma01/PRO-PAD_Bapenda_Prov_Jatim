@@ -188,7 +188,11 @@ def clear_audit_log() -> bool:
 
 # Common event loggers for convenience
 def log_model_run(response: str, predictor: str, r2: float, details: Optional[Dict] = None):
-    """Log a model execution"""
+    """Log a model execution (deduplicated across UI theme reruns)"""
+    sig = f"{response}:{predictor}:{round(float(r2), 6)}"
+    if st.session_state.get("_last_model_log_sig") == sig:
+        return
+    st.session_state["_last_model_log_sig"] = sig
     log_event(
         event_type='model_run',
         action=f'Ran regression: {response} ~ {predictor}',
@@ -202,7 +206,12 @@ def log_model_run(response: str, predictor: str, r2: float, details: Optional[Di
 
 
 def log_projection(response: str, year: int, value: float, scenario: str, details: Optional[Dict] = None):
-    """Log a projection calculation"""
+    """Log a projection calculation (deduplicated across UI theme reruns)"""
+    sig = f"{response}:{year}:{round(float(value), 2)}:{scenario}"
+    cache_key = f"_last_proj_log_sig_{year}"
+    if st.session_state.get(cache_key) == sig:
+        return
+    st.session_state[cache_key] = sig
     log_event(
         event_type='projection',
         action=f'Calculated projection for {response} in {year}',

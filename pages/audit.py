@@ -1,264 +1,253 @@
 """
 Audit Trail Viewer Page
-Displays activity log for transparency and accountability
+Catatan kronologis aktivitas pemodelan, proyeksi, penyuntingan data, penyimpanan skenario, dan ekspor laporan.
 """
 
-import streamlit as st
+from datetime import datetime
+
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from datetime import datetime, timedelta
+import streamlit as st
 
 from utils.audit_utils import (
-    get_audit_log,
-    format_audit_log_df,
-    get_audit_statistics,
     clear_audit_log,
-    initialize_session
+    format_audit_log_df,
+    get_audit_log,
+    get_audit_statistics,
+    initialize_session,
+)
+from utils.ui_components import (
+    apply_plotly_theme,
+    create_header_with_icon,
+    render_kpi_card,
+    render_page_header,
+    render_section_divider,
 )
 
 
-def local_css():
-    st.markdown(
-        """
-        <style>
-            .audit-header {
-                background: linear-gradient(90deg, #6a1b9a, #8e24aa);
-                padding: 20px;
-                border-radius: 12px;
-                margin-bottom: 30px;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            }
-            .audit-header h1 {
-                color: white;
-                margin: 0;
-                font-size: 2.2rem;
-            }
-            .audit-header p {
-                color: #f1f1f1;
-                margin: 0;
-                font-size: 1.05rem;
-            }
-            .stat-card {
-                background: white;
-                border-left: 5px solid #8e24aa;
-                border-radius: 8px;
-                padding: 15px;
-                margin: 10px 0;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-def show_audit_page():
-    local_css()
+def show_audit_page() -> None:
     initialize_session()
 
-    # Header
-    st.markdown(
-        """
-        <div class="audit-header">
-            <h1>📋 Audit Trail</h1>
-            <p>Log aktivitas dan transparansi penggunaan dashboard PAD</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    if "confirm_clear_audit" not in st.session_state:
+        st.session_state.confirm_clear_audit = False
+
+    render_page_header(
+        title="Audit Trail & Log Aktivitas Sistem",
+        subtitle="Rekam jejak kronologis eksekusi model, proyeksi, perubahan data, dan pengunduhan laporan untuk akuntabilitas tata kelola",
+        icon="📋",
     )
 
-    # About audit trail
-    with st.expander("ℹ️ Tentang Audit Trail"):
-        st.markdown("""
-        ### 📚 Apa itu Audit Trail?
+    with st.expander("ℹ️ Tentang Sistem Audit Trail PRO-PAD", expanded=False):
+        st.markdown(
+            """
+            **Audit Trail** mencatat aktivitas penting selama penggunaan aplikasi untuk mendukung transparansi dan kepatuhan internal:
+            - `model_run` — Eksekusi estimasi parameter regresi linear OLS.
+            - `projection` — Perhitungan skenario proyeksi tahun 2025–2026.
+            - `scenario_save` — Penyimpanan skenario simulasi pada Scenario Builder.
+            - `data_edit` — Penyimpanan perubahan dataset historis kustom.
+            - `export` — Pengunduhan dokumen laporan Excel / HTML Eksekutif.
+            - `session_start` — Inisialisasi sesi kerja pengguna.
+            """
+        )
 
-        **Audit Trail** adalah catatan kronologis dari semua aktivitas yang terjadi di dashboard PAD.
-        Sistem ini meningkatkan **transparansi** dan **akuntabilitas** dengan mendokumentasikan:
-
-        - **Model Runs**: Setiap kali model regresi dijalankan
-        - **Projections**: Perhitungan proyeksi PAD
-        - **Data Loads**: Pemuatan data historis
-        - **Scenario Saves**: Penyimpanan skenario what-if
-        - **Exports**: Unduhan laporan dan data
-        - **Sessions**: Sesi pengguna yang mengakses dashboard
-
-        **Manfaat:**
-        - 🔍 Transparansi proses pengambilan keputusan
-        - 📊 Tracking penggunaan dashboard
-        - 🔒 Keamanan dan accountability
-        - 📈 Analisis pola penggunaan
-        """)
-
-    # Get statistics
     stats = get_audit_statistics()
 
-    # Display statistics
-    st.header("📊 Statistik Audit")
-
-    if stats['total_events'] == 0:
-        st.info("📭 Belum ada aktivitas yang tercatat dalam audit log.")
+    if stats["total_events"] == 0:
+        st.info("📭 Belum terdapat entri aktivitas pada log audit.")
         return
 
-    col1, col2, col3, col4 = st.columns(4)
+    # --- KPI Statistik Audit ---
+    create_header_with_icon(
+        "Ringkasan Statistik Aktivitas",
+        "📊",
+        subtitle=f"Rentang pencatatan: {stats['first_event']} s.d. {stats['last_event']}",
+    )
 
-    with col1:
-        st.metric("Total Events", f"{stats['total_events']:,}")
-
-    with col2:
-        st.metric("Unique Users", stats['unique_users'])
-
-    with col3:
-        st.metric("Unique Sessions", stats['unique_sessions'])
-
-    with col4:
-        st.metric("Event Types", len(stats['event_types']))
-
-    # Time range
-    st.caption(f"📅 Periode: {stats['first_event']} sampai {stats['last_event']}")
-
-    # Event type breakdown
-    st.markdown("---")
-    st.subheader("📈 Breakdown by Event Type")
-
-    if stats['event_types']:
-        # Create pie chart
-        fig_pie = px.pie(
-            names=list(stats['event_types'].keys()),
-            values=list(stats['event_types'].values()),
-            title="Distribusi Tipe Event"
+    k1, k2, k3, k4 = st.columns(4)
+    with k1:
+        render_kpi_card(
+            label="Total Aktivitas Tercatat",
+            value=f"{stats['total_events']:,}",
+            icon="📝",
+            variant="primary",
         )
-        fig_pie.update_traces(textposition='inside', textinfo='percent+label')
-        st.plotly_chart(fig_pie, use_container_width=True)
+    with k2:
+        render_kpi_card(
+            label="Pengguna Unik",
+            value=str(stats["unique_users"]),
+            icon="👤",
+            variant="success",
+        )
+    with k3:
+        render_kpi_card(
+            label="Total Sesi Kerja",
+            value=str(stats["unique_sessions"]),
+            icon="🔑",
+            variant="indigo",
+        )
+    with k4:
+        render_kpi_card(
+            label="Kategori Event",
+            value=str(len(stats["event_types"])),
+            icon="🏷️",
+            variant="warning",
+        )
 
-        # Bar chart
-        fig_bar = go.Figure(data=[
-            go.Bar(
-                x=list(stats['event_types'].keys()),
-                y=list(stats['event_types'].values()),
-                marker_color='#8e24aa',
-                text=list(stats['event_types'].values()),
-                textposition='outside'
+    # --- Distribusi Event (Side-by-Side Pie & Bar) ---
+    if stats["event_types"]:
+        create_header_with_icon("Proporsi & Frekuensi Berdasarkan Tipe Event", "📈")
+        c_chart1, c_chart2 = st.columns(2)
+
+        with c_chart1:
+            with st.container(border=True):
+                fig_pie = px.pie(
+                    names=list(stats["event_types"].keys()),
+                    values=list(stats["event_types"].values()),
+                    hole=0.45,
+                    color_discrete_sequence=["#1a5fb4", "#10b981", "#f59e0b", "#6366f1", "#0ea5e9", "#ef4444"],
+                )
+                fig_pie.update_traces(textposition="inside", textinfo="percent+label")
+                apply_plotly_theme(fig_pie, title="Proporsi Kategori Aktivitas", height=370)
+                st.plotly_chart(fig_pie, use_container_width=True)
+
+        with c_chart2:
+            with st.container(border=True):
+                fig_bar = go.Figure(
+                    go.Bar(
+                        x=list(stats["event_types"].keys()),
+                        y=list(stats["event_types"].values()),
+                        marker_color="#1a5fb4",
+                        text=list(stats["event_types"].values()),
+                        textposition="outside",
+                        cliponaxis=False,
+                    )
+                )
+                apply_plotly_theme(
+                    fig_bar,
+                    title="Jumlah Aktivitas per Tipe Event",
+                    height=370,
+                    xaxis_title="Tipe Event",
+                    yaxis_title="Jumlah Tercatat",
+                    show_legend=False,
+                )
+                st.plotly_chart(fig_bar, use_container_width=True)
+
+    render_section_divider()
+
+    # --- Tabel Penelusuran Log ---
+    create_header_with_icon("Penelusuran Rincian Log Audit", "🔍")
+
+    with st.container(border=True):
+        f1, f2, f3 = st.columns([1.8, 1, 1.2])
+        with f1:
+            event_type_filter = st.selectbox(
+                "Filter berdasarkan Tipe Event",
+                ["Semua Tipe"] + list(stats["event_types"].keys()),
             )
-        ])
-        fig_bar.update_layout(
-            title="Jumlah Event per Tipe",
-            xaxis_title="Tipe Event",
-            yaxis_title="Jumlah",
-            template="plotly_white"
-        )
-        st.plotly_chart(fig_bar, use_container_width=True)
+        with f2:
+            limit = st.number_input(
+                "Batas Jumlah Baris",
+                min_value=10,
+                max_value=1000,
+                value=100,
+                step=10,
+            )
 
-    # Audit log viewer
-    st.markdown("---")
-    st.header("🔍 Audit Log Viewer")
-
-    # Filters
-    col1, col2 = st.columns([2, 1])
-
-    with col1:
-        event_type_filter = st.selectbox(
-            "Filter by Event Type",
-            ["All"] + list(stats['event_types'].keys())
+        log_data = (
+            get_audit_log(limit=int(limit))
+            if event_type_filter == "Semua Tipe"
+            else get_audit_log(event_type=event_type_filter, limit=int(limit))
         )
 
-    with col2:
-        limit = st.number_input(
-            "Number of Records",
-            min_value=10,
-            max_value=1000,
-            value=100,
-            step=10
-        )
+        with f3:
+            st.markdown("<div style='height: 1.65rem;'></div>", unsafe_allow_html=True)
+            if log_data:
+                log_df = format_audit_log_df(log_data)
+                st.download_button(
+                    label="📥 Unduh Log Audit (.csv)",
+                    data=log_df.to_csv(index=False).encode("utf-8"),
+                    file_name=f"pro_pad_audit_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                    mime="text/csv",
+                    type="primary",
+                    use_container_width=True,
+                )
 
-    # Get filtered log
-    if event_type_filter == "All":
-        log_data = get_audit_log(limit=limit)
-    else:
-        log_data = get_audit_log(event_type=event_type_filter, limit=limit)
+        if log_data:
+            st.dataframe(log_df, use_container_width=True, hide_index=True, height=380)
+        else:
+            st.info("📭 Tidak ditemukan catatan aktivitas untuk filter yang dipilih.")
 
-    # Display log
-    if log_data:
-        log_df = format_audit_log_df(log_data)
-        st.dataframe(log_df, use_container_width=True, hide_index=True, height=400)
-
-        # Export log
-        st.download_button(
-            label="📥 Download Audit Log (CSV)",
-            data=log_df.to_csv(index=False).encode('utf-8'),
-            file_name=f"audit_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-            mime="text/csv"
-        )
-    else:
-        st.info("📭 No events found matching the filters.")
-
-    # Timeline visualization
+    # --- Linimasa Aktivitas ---
     if log_data and len(log_data) > 1:
-        st.markdown("---")
-        st.subheader("📈 Activity Timeline")
-
-        # Convert to DataFrame for timeline
+        create_header_with_icon("Pola Waktu Aktivitas", "⏱️")
         df_timeline = pd.DataFrame(log_data)
-        df_timeline['timestamp'] = pd.to_datetime(df_timeline['timestamp'])
-        df_timeline['date'] = df_timeline['timestamp'].dt.date
-        df_timeline['hour'] = df_timeline['timestamp'].dt.hour
+        df_timeline["timestamp"] = pd.to_datetime(df_timeline["timestamp"], errors="coerce")
+        df_timeline = df_timeline.dropna(subset=["timestamp"])
 
-        # Events per day
-        daily_counts = df_timeline.groupby('date').size().reset_index(name='count')
-        fig_timeline = px.line(
-            daily_counts,
-            x='date',
-            y='count',
-            title='Activity Over Time (Events per Day)',
-            markers=True
-        )
-        fig_timeline.update_layout(
-            xaxis_title="Date",
-            yaxis_title="Number of Events",
-            template="plotly_white"
-        )
-        st.plotly_chart(fig_timeline, use_container_width=True)
+        if not df_timeline.empty:
+            df_timeline["date"] = df_timeline["timestamp"].dt.date
+            df_timeline["hour"] = df_timeline["timestamp"].dt.hour
 
-        # Events per hour of day
-        hourly_counts = df_timeline.groupby('hour').size().reset_index(name='count')
-        fig_hourly = px.bar(
-            hourly_counts,
-            x='hour',
-            y='count',
-            title='Activity by Hour of Day',
-            labels={'hour': 'Hour (24h)', 'count': 'Number of Events'}
-        )
-        fig_hourly.update_layout(template="plotly_white")
-        st.plotly_chart(fig_hourly, use_container_width=True)
+            t1, t2 = st.columns(2)
+            with t1:
+                with st.container(border=True):
+                    daily_counts = df_timeline.groupby("date").size().reset_index(name="count")
+                    fig_timeline = px.line(daily_counts, x="date", y="count", markers=True)
+                    fig_timeline.update_traces(line=dict(color="#1a5fb4", width=3), marker=dict(size=8))
+                    apply_plotly_theme(
+                        fig_timeline,
+                        title="Tren Aktivitas Harian",
+                        height=350,
+                        xaxis_title="Tanggal",
+                        yaxis_title="Jumlah Event",
+                    )
+                    st.plotly_chart(fig_timeline, use_container_width=True)
 
-    # Admin actions
-    st.markdown("---")
-    st.header("🔧 Admin Actions")
+            with t2:
+                with st.container(border=True):
+                    hourly_counts = df_timeline.groupby("hour").size().reset_index(name="count")
+                    fig_hourly = px.bar(hourly_counts, x="hour", y="count")
+                    fig_hourly.update_traces(marker_color="#10b981")
+                    apply_plotly_theme(
+                        fig_hourly,
+                        title="Distribusi Aktivitas per Jam (00–23)",
+                        height=350,
+                        xaxis_title="Jam (WIB)",
+                        yaxis_title="Jumlah Event",
+                    )
+                    st.plotly_chart(fig_hourly, use_container_width=True)
 
-    col1, col2 = st.columns(2)
+    render_section_divider()
 
-    with col1:
-        if st.button("🔄 Refresh Statistics"):
-            st.rerun()
+    # --- Tindakan Administrasi (Fixed Confirmation) ---
+    create_header_with_icon("Administrasi Log", "🔧")
+    with st.container(border=True):
+        a1, a2 = st.columns(2)
+        with a1:
+            if st.button("🔄 Muat Ulang Statistik Log", use_container_width=True):
+                st.rerun()
+        with a2:
+            if st.button("🗑️ Bersihkan Seluruh Audit Log", use_container_width=True):
+                st.session_state.confirm_clear_audit = True
 
-    with col2:
-        if st.button("🗑️ Clear Audit Log", type="secondary"):
-            st.warning("⚠️ This will permanently delete all audit log entries!")
-            confirm = st.checkbox("I confirm I want to clear the log")
-            if confirm:
-                if clear_audit_log():
-                    st.success("✅ Audit log cleared successfully!")
+        if st.session_state.confirm_clear_audit:
+            st.warning("⚠️ Tindakan ini akan menghapus seluruh riwayat catatan audit secara permanen. Pastikan Anda telah mengunduh salinan CSV terlebih dahulu.")
+            c_ok, c_cancel = st.columns(2)
+            with c_ok:
+                if st.button("✅ Ya, Hapus Seluruh Log", type="primary", use_container_width=True):
+                    if clear_audit_log():
+                        st.session_state.confirm_clear_audit = False
+                        st.rerun()
+                    else:
+                        st.error("❌ Gagal menghapus berkas audit log.")
+            with c_cancel:
+                if st.button("✖ Batal", use_container_width=True):
+                    st.session_state.confirm_clear_audit = False
                     st.rerun()
-                else:
-                    st.error("❌ Failed to clear audit log")
-
-    # Footer
-    st.markdown("---")
-    st.caption("💡 **Tips**: Audit trail membantu memastikan transparansi dan akuntabilitas dalam proses proyeksi PAD. "
-               "Simpan audit log secara berkala untuk dokumentasi.")
 
 
-def app():
+def app() -> None:
     show_audit_page()
 
 

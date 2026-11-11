@@ -9,6 +9,9 @@ import statsmodels.api as sm
 from typing import Dict, List, Tuple
 import plotly.graph_objects as go
 
+from utils.ui_components import apply_plotly_theme
+from utils.ui_theme_utils import format_rupiah_compact
+
 
 def calculate_sensitivity_single_var(
     df: pd.DataFrame,
@@ -147,9 +150,9 @@ def create_tornado_chart(sens_df: pd.DataFrame, response: str, variation_pct: fl
             x=[lower_impact],
             orientation='h',
             name=f"{predictor} (-{variation_pct*100:.0f}%)",
-            marker_color='#ef5350',
-            text=f"{lower_impact/1e9:.2f}T",
-            textposition='inside',
+            marker_color='#ef4444',
+            text=format_rupiah_compact(lower_impact, signed=True),
+            textposition='auto',
             hovertemplate=f"<b>{predictor}</b><br>" +
                          f"Perubahan: -{variation_pct*100:.0f}%<br>" +
                          f"Dampak: Rp {lower_impact:,.0f}<br>" +
@@ -163,9 +166,9 @@ def create_tornado_chart(sens_df: pd.DataFrame, response: str, variation_pct: fl
             x=[upper_impact],
             orientation='h',
             name=f"{predictor} (+{variation_pct*100:.0f}%)",
-            marker_color='#66bb6a',
-            text=f"+{upper_impact/1e9:.2f}T",
-            textposition='inside',
+            marker_color='#10b981',
+            text=format_rupiah_compact(upper_impact, signed=True),
+            textposition='auto',
             hovertemplate=f"<b>{predictor}</b><br>" +
                          f"Perubahan: +{variation_pct*100:.0f}%<br>" +
                          f"Dampak: Rp {upper_impact:,.0f}<br>" +
@@ -173,28 +176,28 @@ def create_tornado_chart(sens_df: pd.DataFrame, response: str, variation_pct: fl
             showlegend=False
         ))
 
-    # Add vertical line at x=0
-    fig.add_vline(x=0, line_width=2, line_color="black")
+    # Add adaptive vertical line at x=0 (readable in Light & Dark modes)
+    fig.add_vline(x=0, line_width=2, line_color="rgba(148, 163, 184, 0.65)")
 
-    fig.update_layout(
-        title=f"Tornado Chart: Sensitivity Analysis {response}<br><sub>Dampak perubahan ±{variation_pct*100:.0f}% pada setiap variabel prediktor</sub>",
+    apply_plotly_theme(
+        fig,
+        title=f"<b>Tornado Chart: Sensitivitas {response}</b><br><sup>Dampak perubahan ±{variation_pct*100:.0f}% pada setiap variabel prediktor</sup>",
+        height=max(440, len(sens_df) * 62),
         xaxis_title=f"Dampak terhadap {response} (Rupiah)",
         yaxis_title="Variabel Prediktor",
+        show_legend=False,
+        margin=dict(l=130, r=48, t=76, b=60),
+    )
+    fig.update_layout(
         barmode='overlay',
-        template='plotly_white',
-        height=max(700, len(sens_df) * 85),
+        hovermode='y unified',
         xaxis=dict(
             tickformat=",.0f",
             zeroline=True,
             zerolinewidth=2,
-            zerolinecolor='black'
+            zerolinecolor='rgba(148, 163, 184, 0.65)'
         ),
-        yaxis=dict(
-            tickfont=dict(size=12)
-        ),
-        hovermode='y unified',
-        showlegend=False,
-        margin=dict(l=180, r=100, t=120, b=100)
+        yaxis=dict(tickfont=dict(size=12))
     )
 
     return fig
@@ -203,13 +206,6 @@ def create_tornado_chart(sens_df: pd.DataFrame, response: str, variation_pct: fl
 def create_elasticity_chart(sens_df: pd.DataFrame, response: str) -> go.Figure:
     """
     Create bar chart showing elasticity coefficients
-
-    Args:
-        sens_df: Sensitivity DataFrame
-        response: Response variable name
-
-    Returns:
-        Plotly Figure: Elasticity chart
     """
     # Sort by absolute elasticity
     sens_df = sens_df.copy()
@@ -217,7 +213,7 @@ def create_elasticity_chart(sens_df: pd.DataFrame, response: str) -> go.Figure:
     sens_df = sens_df.sort_values('abs_elasticity', ascending=False)
 
     # Color based on positive/negative
-    colors = ['#66bb6a' if x > 0 else '#ef5350' for x in sens_df['elasticity']]
+    colors = ['#10b981' if x > 0 else '#ef4444' for x in sens_df['elasticity']]
 
     fig = go.Figure()
 
@@ -227,28 +223,31 @@ def create_elasticity_chart(sens_df: pd.DataFrame, response: str) -> go.Figure:
         marker_color=colors,
         text=[f"{x:.3f}" for x in sens_df['elasticity']],
         textposition='outside',
-        hovertemplate='<b>%{x}</b><br>Elasticity: %{y:.3f}<extra></extra>'
+        cliponaxis=False,
+        hovertemplate='<b>%{x}</b><br>Elastisitas: %{y:.3f}<extra></extra>'
     ))
 
-    fig.update_layout(
-        title=f"Elasticity: {response} terhadap Variabel Makro<br><sub>Nilai > 1 = elastis (sensitif), < 1 = inelastis</sub>",
+    apply_plotly_theme(
+        fig,
+        title=f"<b>Koefisien Elastisitas: {response} terhadap Variabel Makro</b><br><sup>|e| > 1 = elastis (sensitif), |e| < 1 = inelastis</sup>",
+        height=440,
         xaxis_title="Variabel Prediktor",
-        yaxis_title="Elasticity Coefficient",
-        template='plotly_white',
-        height=700,
+        yaxis_title="Koefisien Elastisitas",
+        show_legend=False,
+        margin=dict(l=68, r=36, t=78, b=88),
+    )
+    fig.update_layout(
         yaxis=dict(
             zeroline=True,
             zerolinewidth=2,
-            zerolinecolor='black',
-            tickformat=".3f"
+            zerolinecolor='rgba(148, 163, 184, 0.65)',
+            tickformat=".2f"
         ),
         xaxis=dict(
-            tickangle=-45,
+            tickangle=-25,
             tickfont=dict(size=12)
         ),
         hovermode='x',
-        showlegend=False,
-        margin=dict(l=100, r=100, t=120, b=150)
     )
 
     return fig
@@ -257,30 +256,17 @@ def create_elasticity_chart(sens_df: pd.DataFrame, response: str) -> go.Figure:
 def interpret_sensitivity(sens_df: pd.DataFrame) -> Dict[str, str]:
     """
     Provide interpretation of sensitivity analysis results
-
-    Args:
-        sens_df: Sensitivity DataFrame
-
-    Returns:
-        dict: Interpretation text
     """
-    # Most impactful variable
     most_impact = sens_df.iloc[0]
-
-    # Least impactful variable
     least_impact = sens_df.iloc[-1]
-
-    # Variables with high elasticity (>1)
     high_elasticity = sens_df[sens_df['elasticity'].abs() > 1]
-
-    # Variables with low elasticity (<0.5)
     low_elasticity = sens_df[sens_df['elasticity'].abs() < 0.5]
 
     interpretation = {
-        'most_impactful': f"**{most_impact['predictor']}** memiliki dampak terbesar dengan range Rp {most_impact['total_range']/1e9:.2f}T untuk perubahan ±10%.",
-        'least_impactful': f"**{least_impact['predictor']}** memiliki dampak terkecil dengan range Rp {least_impact['total_range']/1e9:.2f}T untuk perubahan ±10%.",
-        'high_elasticity': f"Variabel dengan elastisitas tinggi (>1): {', '.join(high_elasticity['predictor'].tolist()) if len(high_elasticity) > 0 else 'Tidak ada'}",
-        'low_elasticity': f"Variabel dengan elastisitas rendah (<0.5): {', '.join(low_elasticity['predictor'].tolist()) if len(low_elasticity) > 0 else 'Tidak ada'}"
+        'most_impactful': f"**{most_impact['predictor']}** memiliki dampak terbesar dengan rentang {format_rupiah_compact(most_impact['total_range'])} untuk perubahan ±10%.",
+        'least_impactful': f"**{least_impact['predictor']}** memiliki dampak terkecil dengan rentang {format_rupiah_compact(least_impact['total_range'])} untuk perubahan ±10%.",
+        'high_elasticity': f"Variabel elastisitas tinggi (|e| > 1): {', '.join(high_elasticity['predictor'].tolist()) if len(high_elasticity) > 0 else 'Tidak ada'}",
+        'low_elasticity': f"Variabel elastisitas rendah (|e| < 0.5): {', '.join(low_elasticity['predictor'].tolist()) if len(low_elasticity) > 0 else 'Tidak ada'}"
     }
 
     return interpretation
@@ -289,22 +275,16 @@ def interpret_sensitivity(sens_df: pd.DataFrame) -> Dict[str, str]:
 def format_sensitivity_table(sens_df: pd.DataFrame) -> pd.DataFrame:
     """
     Format sensitivity DataFrame for display
-
-    Args:
-        sens_df: Raw sensitivity DataFrame
-
-    Returns:
-        DataFrame: Formatted for display
     """
     display_df = sens_df.copy()
 
     display_df['Variabel'] = display_df['predictor']
     display_df['Nilai Base'] = display_df['base_value'].apply(lambda x: f"{x:.2f}")
-    display_df['Proyeksi Base (Rp)'] = display_df['base_prediction'].apply(lambda x: f"Rp {x/1e9:.2f}T")
-    display_df['Dampak -10%'] = display_df['lower_impact'].apply(lambda x: f"Rp {x/1e9:.2f}T")
-    display_df['Dampak +10%'] = display_df['upper_impact'].apply(lambda x: f"Rp {x/1e9:.2f}T")
-    display_df['Total Range'] = display_df['total_range'].apply(lambda x: f"Rp {x/1e9:.2f}T")
+    display_df['Proyeksi Base'] = display_df['base_prediction'].apply(lambda x: format_rupiah_compact(x))
+    display_df['Dampak (-10%)'] = display_df['lower_impact'].apply(lambda x: format_rupiah_compact(x, signed=True))
+    display_df['Dampak (+10%)'] = display_df['upper_impact'].apply(lambda x: format_rupiah_compact(x, signed=True))
+    display_df['Rentang Total'] = display_df['total_range'].apply(lambda x: format_rupiah_compact(abs(x)))
     display_df['Elastisitas'] = display_df['elasticity'].apply(lambda x: f"{x:.3f}")
 
-    return display_df[['Variabel', 'Nilai Base', 'Proyeksi Base (Rp)',
-                       'Dampak -10%', 'Dampak +10%', 'Total Range', 'Elastisitas']]
+    return display_df[['Variabel', 'Nilai Base', 'Proyeksi Base',
+                       'Dampak (-10%)', 'Dampak (+10%)', 'Rentang Total', 'Elastisitas']]

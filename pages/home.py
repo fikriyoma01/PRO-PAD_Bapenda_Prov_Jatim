@@ -1,269 +1,298 @@
 """
-Home Page - Dashboard PAD Landing
-Modern, engaging landing page with overview and quick stats
+Home Page — Dashboard PRO-PAD Bapenda Provinsi Jawa Timur
+Halaman utama ikhtisar capaian historis, tren PAD, fitur unggulan, dan navigasi cepat.
 """
 
-import streamlit as st
-import pandas as pd
 import plotly.graph_objects as go
+import streamlit as st
+
 from data_loader import load_pad_historis
 from utils.ui_components import (
-    render_gradient_header,
-    render_metric_card,
-    render_info_box,
-    render_section_divider,
+    apply_plotly_theme,
+    create_header_with_icon,
     render_feature_card,
-    create_header_with_icon
+    render_info_box,
+    render_kpi_card,
+    render_page_header,
+    render_section_divider,
 )
+from utils.ui_theme_utils import format_rupiah_compact, format_rupiah_full
 
 
-def show_home_page():
-    # Main Header
-    render_gradient_header(
+def show_home_page() -> None:
+    render_page_header(
         title="Dashboard Proyeksi PAD Jawa Timur",
-        subtitle="Sistem Analisis & Proyeksi Pendapatan Asli Daerah Berbasis Data Science",
-        icon="🏛️"
+        subtitle="Sistem Analisis, Simulasi Kebijakan HKPD, dan Proyeksi Pendapatan Asli Daerah Berbasis Data Science",
+        icon="🏛️",
     )
 
-    # Welcome message
-    st.markdown("""
-    <div class="modern-card fade-in" style="text-align: center; padding: 2rem;">
-        <h2 style="color: #1a5fb4; margin-bottom: 1rem;">Selamat Datang di Dashboard PAD Jawa Timur</h2>
-        <p style="font-size: 1.1rem; color: #6c757d; line-height: 1.8;">
-            Dashboard ini menyediakan analisis mendalam dan proyeksi akurat untuk
-            <strong>PKB (Pajak Kendaraan Bermotor)</strong> dan <strong>BBNKB (Bea Balik Nama Kendaraan Bermotor)</strong>
-            menggunakan metodologi statistik dan machine learning.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    # Ringkasan pengantar institusional
+    st.markdown(
+        """
+        <div class="modern-card fade-in" style="padding: 1.5rem 1.75rem;">
+            <h3 style="color: var(--heading-accent); margin: 0 0 0.55rem 0; font-size: 1.2rem; font-weight: 700;">
+                Selamat Datang di Sistem Analitik PRO-PAD Bapenda Provinsi Jawa Timur
+            </h3>
+            <p style="font-size: 0.98rem; color: var(--text-secondary); line-height: 1.7; margin: 0;">
+                Platform ini menyajikan pemantauan realisasi historis, pemodelan ekonometrika, simulasi skenario makroekonomi,
+                serta dukungan keputusan strategis untuk <strong>PKB (Pajak Kendaraan Bermotor)</strong> dan
+                <strong>BBNKB (Bea Balik Nama Kendaraan Bermotor)</strong> secara transparan dan terukur.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    # Load data for quick stats
+    # Muat data historis terkini (mendukung dataset kustom apabila diaktifkan)
     df = load_pad_historis()
-    latest_year = int(df['Tahun'].max())
-    latest_pkb = df.loc[df['Tahun'] == latest_year, 'PKB'].iloc[0]
-    latest_bbnkb = df.loc[df['Tahun'] == latest_year, 'BBNKB'].iloc[0]
+    min_year = int(df["Tahun"].min())
+    latest_year = int(df["Tahun"].max())
+    latest_pkb = float(df.loc[df["Tahun"] == latest_year, "PKB"].iloc[0])
+    latest_bbnkb = float(df.loc[df["Tahun"] == latest_year, "BBNKB"].iloc[0])
+    total_pad = latest_pkb + latest_bbnkb
 
-    # Calculate growth if possible
     if len(df) >= 2:
-        prev_year = latest_year - 1
-        prev_pkb = df.loc[df['Tahun'] == prev_year, 'PKB'].iloc[0]
-        prev_bbnkb = df.loc[df['Tahun'] == prev_year, 'BBNKB'].iloc[0]
-        pkb_growth = ((latest_pkb - prev_pkb) / prev_pkb * 100)
-        bbnkb_growth = ((latest_bbnkb - prev_bbnkb) / prev_bbnkb * 100)
+        prev_df = df.sort_values("Tahun")
+        prev_pkb = float(prev_df["PKB"].iloc[-2])
+        prev_bbnkb = float(prev_df["BBNKB"].iloc[-2])
+        prev_total = prev_pkb + prev_bbnkb
+        pkb_growth = ((latest_pkb - prev_pkb) / prev_pkb * 100) if prev_pkb else 0.0
+        bbnkb_growth = ((latest_bbnkb - prev_bbnkb) / prev_bbnkb * 100) if prev_bbnkb else 0.0
+        total_growth = ((total_pad - prev_total) / prev_total * 100) if prev_total else 0.0
     else:
-        pkb_growth = 0
-        bbnkb_growth = 0
+        pkb_growth = 0.0
+        bbnkb_growth = 0.0
+        total_growth = 0.0
 
-    # Quick Stats Section
-    create_header_with_icon("📊 Ringkasan Data Terkini", "📈")
+    # --- KPI Utama ---
+    create_header_with_icon(
+        "Ringkasan Realisasi Terkini",
+        "📊",
+        subtitle=f"Posisi capaian tahun terakhir ({latest_year}) dibandingkan tahun sebelumnya",
+    )
 
     col1, col2, col3, col4 = st.columns(4)
-
     with col1:
-        render_metric_card(
-            label=f"PKB {latest_year}",
-            value=f"Rp {latest_pkb/1e9:.2f}T",
-            delta=f"{pkb_growth:+.1f}%",
-            delta_positive=pkb_growth > 0
+        render_kpi_card(
+            label=f"Realisasi PKB {latest_year}",
+            value=format_rupiah_compact(latest_pkb, respect_privacy=True),
+            delta=f"{pkb_growth:+.2f}% YoY",
+            delta_positive=pkb_growth >= 0,
+            subtitle=format_rupiah_full(latest_pkb),
+            icon="🚗",
+            variant="primary",
         )
-
     with col2:
-        render_metric_card(
-            label=f"BBNKB {latest_year}",
-            value=f"Rp {latest_bbnkb/1e9:.2f}T",
-            delta=f"{bbnkb_growth:+.1f}%",
-            delta_positive=bbnkb_growth > 0
+        render_kpi_card(
+            label=f"Realisasi BBNKB {latest_year}",
+            value=format_rupiah_compact(latest_bbnkb, respect_privacy=True),
+            delta=f"{bbnkb_growth:+.2f}% YoY",
+            delta_positive=bbnkb_growth >= 0,
+            subtitle=format_rupiah_full(latest_bbnkb),
+            icon="📝",
+            variant="warning",
         )
-
     with col3:
-        total_pad = latest_pkb + latest_bbnkb
-        render_metric_card(
-            label=f"Total PAD {latest_year}",
-            value=f"Rp {total_pad/1e9:.2f}T",
-            delta=None
+        render_kpi_card(
+            label=f"Total PKB + BBNKB {latest_year}",
+            value=format_rupiah_compact(total_pad, respect_privacy=True),
+            delta=f"{total_growth:+.2f}% YoY",
+            delta_positive=total_growth >= 0,
+            subtitle=format_rupiah_full(total_pad),
+            icon="💰",
+            variant="success",
         )
-
     with col4:
-        render_metric_card(
-            label="Data Range",
-            value=f"{int(df['Tahun'].min())}-{latest_year}",
-            delta=f"{len(df)} Years"
+        render_kpi_card(
+            label="Cakupan Observasi",
+            value=f"{min_year}–{latest_year}",
+            delta=f"{len(df)} Tahun Data",
+            delta_positive=None,
+            subtitle="7 Indikator Makroekonomi",
+            icon="📅",
+            variant="indigo",
         )
 
     render_section_divider()
 
-    # Trend visualization
-    create_header_with_icon("📈 Tren Historis PAD", "📉")
-
-    st.markdown("""
-    <div class="modern-card">
-    """, unsafe_allow_html=True)
-
-    # Create beautiful line chart
-    fig = go.Figure()
-
-    # PKB line
-    fig.add_trace(go.Scatter(
-        x=df['Tahun'],
-        y=df['PKB'],
-        mode='lines+markers',
-        name='PKB',
-        line=dict(color='#1a5fb4', width=4, shape='spline'),
-        marker=dict(size=10, symbol='circle', line=dict(width=2, color='white')),
-        hovertemplate='<b>PKB</b><br>Tahun: %{x}<br>Nilai: Rp %{y:,.0f}<extra></extra>'
-    ))
-
-    # BBNKB line
-    fig.add_trace(go.Scatter(
-        x=df['Tahun'],
-        y=df['BBNKB'],
-        mode='lines+markers',
-        name='BBNKB',
-        line=dict(color='#ff9800', width=4, shape='spline'),
-        marker=dict(size=10, symbol='diamond', line=dict(width=2, color='white')),
-        hovertemplate='<b>BBNKB</b><br>Tahun: %{x}<br>Nilai: Rp %{y:,.0f}<extra></extra>'
-    ))
-
-    fig.update_layout(
-        title={
-            'text': '<b>Tren PKB & BBNKB (2018-2024)</b>',
-            'x': 0.5,
-            'xanchor': 'center',
-            'font': {'size': 20, 'color': '#2c3e50'}
-        },
-        xaxis=dict(
-            title='<b>Tahun</b>',
-            tickmode='linear',
-            tick0=df['Tahun'].min(),
-            dtick=1,
-            gridcolor='#e9ecef',
-            showgrid=True
-        ),
-        yaxis=dict(
-            title='<b>Nilai (Rupiah)</b>',
-            tickformat=',.0f',
-            gridcolor='#e9ecef',
-            showgrid=True
-        ),
-        template='plotly_white',
-        hovermode='x unified',
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="right",
-            x=1,
-            bgcolor="rgba(255, 255, 255, 0.8)",
-            bordercolor="#e9ecef",
-            borderwidth=2
-        ),
-        height=500,
-        plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)'
+    # --- Tren Historis PAD ---
+    create_header_with_icon(
+        "Tren Historis PKB & BBNKB",
+        "📈",
+        subtitle=f"Perkembangan penerimaan pajak kendaraan bermotor Provinsi Jawa Timur ({min_year}–{latest_year})",
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    with st.container(border=True):
+        fig = go.Figure()
+        fig.add_trace(
+            go.Scatter(
+                x=df["Tahun"],
+                y=df["PKB"],
+                mode="lines+markers",
+                name="PKB",
+                line=dict(color="#1a5fb4", width=3.5, shape="spline"),
+                marker=dict(size=9, symbol="circle", line=dict(width=2, color="#ffffff")),
+                hovertemplate="<b>PKB</b><br>Tahun: %{x}<br>Realisasi: Rp %{y:,.0f}<extra></extra>",
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=df["Tahun"],
+                y=df["BBNKB"],
+                mode="lines+markers",
+                name="BBNKB",
+                line=dict(color="#f59e0b", width=3.5, shape="spline"),
+                marker=dict(size=9, symbol="diamond", line=dict(width=2, color="#ffffff")),
+                hovertemplate="<b>BBNKB</b><br>Tahun: %{x}<br>Realisasi: Rp %{y:,.0f}<extra></extra>",
+            )
+        )
 
-    st.markdown("</div>", unsafe_allow_html=True)
+        apply_plotly_theme(
+            fig,
+            title=f"Tren Realisasi PKB & BBNKB ({min_year}–{latest_year})",
+            height=440,
+            xaxis_title="Tahun",
+            yaxis_title="Nilai Penerimaan (Rupiah)",
+            is_currency=True,
+        )
+        fig.update_layout(
+            hovermode="x unified",
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        )
+        fig.update_xaxes(dtick=1)
+        st.plotly_chart(fig, use_container_width=True)
 
     render_section_divider()
 
-    # Features Grid
-    create_header_with_icon("✨ Fitur Unggulan Dashboard", "🎯")
+    # --- Fitur Unggulan ---
+    create_header_with_icon(
+        "Kapabilitas Utama Sistem",
+        "✨",
+        subtitle="Arsitektur analitik komprehensif dari eksplorasi data hingga rekomendasi kebijakan",
+    )
 
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
+    row1 = st.columns(3)
+    with row1[0]:
         render_feature_card(
             icon="📊",
-            title="Analisis Mendalam",
-            description="Visualisasi data historis, correlation heatmap, dan analisis statistik komprehensif"
+            title="Eksplorasi & Korelasi Makro",
+            description="Visualisasi realisasi historis, matriks korelasi 9 variabel, serta deteksi otomatis multikolinearitas.",
         )
-
-    with col2:
+    with row1[1]:
         render_feature_card(
             icon="🔮",
-            title="Proyeksi Akurat",
-            description="Model ensemble (OLS, ARIMA, Exp Smoothing) dengan confidence intervals 95%"
+            title="Proyeksi Ensemble & CI 95%",
+            description="Kombinasi model OLS, ARIMA, dan Exponential Smoothing lengkap dengan rentang kepercayaan statistik 95%.",
         )
-
-    with col3:
+    with row1[2]:
         render_feature_card(
-            icon="🎯",
-            title="Scenario Planning",
-            description="Interactive what-if analysis dengan 7 variabel makroekonomi"
+            icon="⚖️",
+            title="Dekomposisi & Simulasi HKPD",
+            description="Perhitungan berbasis objek pajak riil, proyeksi bagi hasil Provinsi vs Kab/Kota (UU 1/2022), dan analisis waterfall.",
         )
 
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
+    row2 = st.columns(3)
+    with row2[0]:
         render_feature_card(
             icon="📈",
-            title="Model Validation",
-            description="RMSE, MAPE, cross-validation, dan backtesting untuk akurasi terjamin"
+            title="Validasi & Backtesting",
+            description="Evaluasi akurasi model menggunakan RMSE, MAE, MAPE, Leave-One-Out Cross-Validation (LOOCV), dan uji historis.",
         )
-
-    with col2:
+    with row2[1]:
         render_feature_card(
-            icon="🔬",
-            title="Sensitivity Analysis",
-            description="Tornado chart dan elasticity analysis untuk risk assessment"
+            icon="🌪️",
+            title="Analisis Sensitivitas & Skenario",
+            description="Tornado chart, koefisien elastisitas, serta simulasi what-if interaktif lintas 7 indikator makroekonomi.",
         )
-
-    with col3:
+    with row2[2]:
         render_feature_card(
-            icon="📋",
-            title="Audit Trail",
-            description="Tracking lengkap semua aktivitas untuk transparansi dan compliance"
+            icon="🏛️",
+            title="Executive Decision Support",
+            description="Penilaian risiko pencapaian target, rekomendasi tindakan prioritas, audit trail, dan ekspor laporan eksekutif.",
         )
 
     render_section_divider()
 
-    # Quick Navigation
-    create_header_with_icon("🧭 Navigasi Cepat", "🚀")
+    # --- Navigasi Cepat Interaktif ---
+    create_header_with_icon(
+        "Navigasi Cepat",
+        "🧭",
+        subtitle="Akses langsung ke modul analitik utama",
+    )
 
-    st.markdown("""
-    <div class="modern-card">
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
-            <div style="padding: 1.5rem; border-left: 4px solid #1a5fb4; background: var(--gray-light); border-radius: 8px;">
-                <h3 style="color: #1a5fb4; margin: 0 0 0.5rem 0;">📄 Dataset</h3>
-                <p style="color: var(--text-muted); margin: 0; font-size: 0.95rem;">Lihat data historis, correlation heatmap, dan statistik deskriptif</p>
-            </div>
-            <div style="padding: 1.5rem; border-left: 4px solid #4caf50; background: var(--gray-light); border-radius: 8px;">
-                <h3 style="color: #4caf50; margin: 0 0 0.5rem 0;">📊 Pemodelan</h3>
-                <p style="color: var(--text-muted); margin: 0; font-size: 0.95rem;">Regresi, validation metrics, dan sensitivity analysis</p>
-            </div>
-            <div style="padding: 1.5rem; border-left: 4px solid #ff9800; background: var(--gray-light); border-radius: 8px;">
-                <h3 style="color: #ff9800; margin: 0 0 0.5rem 0;">📈 Proyeksi</h3>
-                <p style="color: var(--text-muted); margin: 0; font-size: 0.95rem;">Proyeksi 2025-2026 dengan CI dan ensemble models</p>
-            </div>
-            <div style="padding: 1.5rem; border-left: 4px solid #8e24aa; background: var(--gray-light); border-radius: 8px;">
-                <h3 style="color: #8e24aa; margin: 0 0 0.5rem 0;">🎯 Scenario Builder</h3>
-                <p style="color: var(--text-muted); margin: 0; font-size: 0.95rem;">What-if analysis interaktif dengan multiple scenarios</p>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    quick_links = [
+        (
+            "📄 Dataset Historis",
+            "datasets",
+            "#1a5fb4",
+            "Tinjau data 2018–2024, perkembangan indikator makro, dan heatmap korelasi.",
+        ),
+        (
+            "📊 Pemodelan Regresi",
+            "pemodelan",
+            "#10b981",
+            "Uji signifikansi prediktor makro, LOOCV, backtesting, dan tornado chart.",
+        ),
+        (
+            "📈 Proyeksi 2025–2026",
+            "proyeksi",
+            "#f59e0b",
+            "Bandingkan skenario Optimis/Moderat/Pesimis dan model ensemble.",
+        ),
+        (
+            "🎯 Scenario Builder",
+            "scenario_builder",
+            "#6366f1",
+            "Jalankan simulasi what-if interaktif dan simpan skenario kebijakan kustom.",
+        ),
+    ]
 
-    # Info boxes at bottom
+    nav_cols = st.columns(4)
+    for col, (title, slug, accent, desc) in zip(nav_cols, quick_links):
+        with col:
+            with st.container(border=True):
+                st.markdown(
+                    f"""
+                    <div style="border-top: 3px solid {accent}; padding-top: 0.65rem; min-height: 112px;">
+                        <h4 style="color: var(--heading-accent); margin: 0 0 0.45rem 0; font-size: 1.02rem; font-weight: 700;">
+                            {title}
+                        </h4>
+                        <p style="color: var(--text-muted); margin: 0; font-size: 0.88rem; line-height: 1.5;">
+                            {desc}
+                        </p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                if st.button("Buka Halaman →", key=f"quick_nav_{slug}", use_container_width=True):
+                    st.session_state.current_page = slug
+                    st.rerun()
+
     render_section_divider()
 
     render_info_box(
-        "💡 <strong>Tips Penggunaan:</strong> Mulai dari halaman <strong>Dataset</strong> untuk memahami data, "
-        "lalu ke <strong>Pemodelan</strong> untuk melihat analisis statistik, dan <strong>Proyeksi</strong> untuk melihat hasil forecasting.",
-        box_type="info"
+        "<strong>Alur Kerja yang Disarankan:</strong> Mulailah dari <strong>Dataset Historis</strong> untuk meninjau tren dasar, "
+        "lanjutkan ke <strong>Pemodelan Regresi</strong> & <strong>Proyeksi 2025–2026</strong> untuk melihat estimasi berbasis makro, "
+        "lalu gunakan <strong>Dekomposisi PAD</strong> dan <strong>Decision Support</strong> untuk penetapan target operasional.",
+        box_type="info",
     )
 
-    # Footer
-    st.markdown("""
-    <div style="text-align: center; padding: 2rem; color: #6c757d; font-size: 0.9rem;">
-        <p style="margin: 0;">Dashboard PAD Jawa Timur v2.0</p>
-        <p style="margin: 0.5rem 0 0 0;">Developed with ❤️ by Claude AI | © 2025 Bapenda Prov. Jatim</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div style="text-align: center; padding: 1.5rem 1rem 0.5rem 1rem; color: var(--text-muted); font-size: 0.86rem;">
+            <p style="margin: 0; font-weight: 600; color: var(--text-secondary);">
+                PRO-PAD — Sistem Proyeksi Pendapatan Asli Daerah v2.0
+            </p>
+            <p style="margin: 0.3rem 0 0 0;">
+                Badan Pendapatan Daerah Provinsi Jawa Timur • © 2025 Pemerintah Provinsi Jawa Timur
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
-def app():
+def app() -> None:
     show_home_page()
 
 

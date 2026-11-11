@@ -8,6 +8,8 @@ import pandas as pd
 import statsmodels.api as sm
 from typing import Tuple, Dict
 
+from utils.ui_theme_utils import format_rupiah_compact
+
 
 def calculate_historical_volatility(series: pd.Series, method: str = 'returns') -> float:
     """
@@ -177,21 +179,15 @@ def calculate_ensemble_scenario_bounds(
 def format_scenario_comparison(scenarios: Dict[str, Tuple[float, float, float]]) -> pd.DataFrame:
     """
     Format scenario results for display
-
-    Args:
-        scenarios: Dict of scenario bounds from different methods
-
-    Returns:
-        DataFrame: Formatted comparison table
     """
     data = []
     for method, (opt, mod, pes) in scenarios.items():
         data.append({
-            'Method': method.replace('_', ' ').title(),
-            'Optimistic': f"Rp {opt/1e9:.2f}T",
-            'Moderate': f"Rp {mod/1e9:.2f}T",
-            'Pessimistic': f"Rp {pes/1e9:.2f}T",
-            'Range (%)': f"±{((opt-pes)/(2*mod)*100):.1f}%"
+            'Metode': method.replace('_', ' ').title(),
+            'Optimis (Batas Atas)': format_rupiah_compact(opt),
+            'Moderat (Tengah)': format_rupiah_compact(mod),
+            'Pesimis (Batas Bawah)': format_rupiah_compact(pes),
+            'Rentang (±%)': f"±{((opt-pes)/(2*mod)*100):.1f}%" if mod else "0.0%"
         })
 
     return pd.DataFrame(data)

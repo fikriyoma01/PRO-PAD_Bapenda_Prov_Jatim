@@ -1,106 +1,223 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
 /*
 =====================================================
-PAD Dashboard - Custom CSS Styling
-Professional, Modern & Clean Design
+PRO-PAD Dashboard — Bapenda Provinsi Jawa Timur
+Design System & Light Theme Stylesheet
 =====================================================
 */
 
-/* === Global Styles === */
 :root {
     --primary-blue: #1a5fb4;
+    --primary-blue-dark: #0f3d7a;
     --primary-blue-light: #3584e4;
+    --heading-accent: #134a8e;
+    --kpi-value-color: #0f3d7a;
     --accent-gold: #ffd700;
-    --accent-orange: #ff9800;
-    --success-green: #4caf50;
-    --danger-red: #ef5350;
-    --purple-dark: #6a1b9a;
-    --purple-light: #8e24aa;
-    --gray-light: #f8f9fa;
-    --gray-medium: #e9ecef;
-    --text-dark: #2c3e50;
-    --text-muted: #6c757d;
+    --accent-amber: #f59e0b;
+    --accent-orange: #f59e0b;
+    --success-green: #10b981;
+    --danger-red: #ef4444;
+    --indigo-accent: #6366f1;
+
+    --gray-light: #f1f5f9;
+    --gray-medium: #e2e8f0;
+    --text-dark: #0f172a;
+    --text-secondary: #334155;
+    --text-muted: #64748b;
+
     --card-bg: #ffffff;
-    --card-border: rgba(0, 0, 0, 0.05);
-    --app-bg: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+    --card-border: rgba(15, 23, 42, 0.08);
+    --app-bg: linear-gradient(150deg, #f1f5f9 0%, #e8eef6 100%);
+
+    --sidebar-start: #0b192c;
+    --sidebar-end: #1e3a5f;
+
+    --radius-card: 14px;
+    --shadow-card: 0 6px 20px rgba(15, 23, 42, 0.06);
+    --pad-card: 1.35rem;
+    --font-sans: 'Plus Jakarta Sans', 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
-/* Main container */
+/* === App Base & Typography === */
+html, body, .stApp {
+    font-family: var(--font-sans);
+}
+
 .stApp {
     background: var(--app-bg);
 }
 
-/* === Enhanced Card Styles === */
-.modern-card {
-    background: var(--card-bg);
-    border-radius: 16px;
-    padding: 2rem;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-    border: 1px solid var(--card-border);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    margin: 1.5rem 0;
+.block-container {
+    padding-top: 2rem !important;
+    padding-bottom: 3rem !important;
+    max-width: 1400px;
 }
 
-.modern-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+/* === Watermark Opsional (UI Customization) === */
+.propad-watermark {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 9999;
+    font-size: clamp(2rem, 5vw, 4.2rem);
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(15, 23, 42, 0.045);
+    transform: rotate(-24deg);
+    user-select: none;
 }
 
-/* Gradient Header Cards */
+/* === Page Hero Header === */
 .gradient-header {
-    background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-light) 100%);
-    padding: 2.5rem 2rem;
-    border-radius: 20px;
-    margin-bottom: 2rem;
-    box-shadow: 0 12px 40px rgba(26, 95, 180, 0.25);
+    background: linear-gradient(135deg, #0c2d57 0%, var(--primary-blue) 58%, var(--primary-blue-light) 100%);
+    padding: 1.75rem 2rem;
+    border-radius: 18px;
+    margin-bottom: 1.6rem;
+    box-shadow: 0 10px 30px rgba(15, 61, 122, 0.22);
+    border-bottom: 4px solid var(--accent-gold);
     position: relative;
     overflow: hidden;
 }
 
-.gradient-header::before {
+.gradient-header::after {
     content: '';
     position: absolute;
-    top: -50%;
-    right: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-    animation: pulse 15s ease-in-out infinite;
+    top: -60%;
+    right: -12%;
+    width: 340px;
+    height: 340px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 215, 0, 0.16) 0%, rgba(255, 255, 255, 0.05) 45%, transparent 70%);
+    pointer-events: none;
 }
 
-@keyframes pulse {
-    0%, 100% { transform: scale(1); opacity: 0.5; }
-    50% { transform: scale(1.1); opacity: 0.8; }
+.page-hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 215, 0, 0.16);
+    border: 1px solid rgba(255, 215, 0, 0.42);
+    color: #fde68a !important;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    padding: 0.25rem 0.7rem;
+    border-radius: 999px;
+    margin-bottom: 0.7rem;
+    position: relative;
+    z-index: 1;
+}
+
+.page-hero-title-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    position: relative;
+    z-index: 1;
+}
+
+.page-hero-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+    font-size: 1.75rem;
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: 14px;
+    backdrop-filter: blur(6px);
 }
 
 .gradient-header h1 {
-    color: white;
-    font-size: 2.5rem;
-    font-weight: 700;
-    margin: 0;
-    text-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    position: relative;
-    z-index: 1;
+    color: #ffffff !important;
+    font-size: 1.95rem !important;
+    font-weight: 800 !important;
+    line-height: 1.22 !important;
+    margin: 0 !important;
+    letter-spacing: -0.015em;
 }
 
 .gradient-header p {
-    color: rgba(255,255,255,0.95);
-    font-size: 1.15rem;
-    margin: 0.5rem 0 0 0;
-    position: relative;
-    z-index: 1;
+    color: rgba(241, 245, 249, 0.92) !important;
+    font-size: 0.98rem !important;
+    line-height: 1.5 !important;
+    margin: 0.35rem 0 0 0 !important;
 }
 
-/* === Enhanced Metrics === */
+/* === Section Headings === */
+.section-heading-wrap {
+    margin: 1.65rem 0 0.95rem 0;
+}
+
+.section-heading {
+    color: var(--heading-accent) !important;
+    font-weight: 700 !important;
+    font-size: 1.35rem !important;
+    line-height: 1.3 !important;
+    margin: 0 !important;
+    padding-left: 0.8rem;
+    border-left: 4px solid var(--accent-amber);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.section-heading span {
+    color: var(--heading-accent) !important;
+}
+
+.section-heading-icon {
+    font-size: 1.35rem;
+    line-height: 1;
+}
+
+.section-heading-sub {
+    color: var(--text-muted) !important;
+    font-size: 0.9rem !important;
+    margin: 0.3rem 0 0 1.05rem !important;
+}
+
+/* === Card Surfaces & Native Bordered Containers === */
+/* Di Streamlit 1.45, HANYA st.container(border=True) yang menjadi direct child
+   dari [data-testid="stVerticalBlock"] di area utama (sedangkan sidebar, kolom,
+   tab-panel, form, dan root main memiliki parent wrapper berbeda). */
+.modern-card,
+[data-testid="stMain"] [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlockBorderWrapper"] {
+    background: var(--card-bg) !important;
+    border-radius: var(--radius-card) !important;
+    border: 1px solid var(--card-border) !important;
+    box-shadow: var(--shadow-card) !important;
+    padding: var(--pad-card) !important;
+}
+
+.modern-card {
+    margin: 0.85rem 0;
+}
+
+/* === Standardized KPI Metric Cards === */
 .metric-card {
     background: var(--card-bg);
-    border-radius: 16px;
-    padding: 1.8rem;
-    text-align: center;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-    border: 2px solid transparent;
-    transition: all 0.3s ease;
+    border-radius: var(--radius-card);
+    padding: 1.25rem 1.15rem;
+    text-align: left;
+    box-shadow: var(--shadow-card);
+    border: 1px solid var(--card-border);
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
     position: relative;
     overflow: hidden;
+    min-height: 138px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    margin-bottom: 0.6rem;
 }
 
 .metric-card::before {
@@ -113,170 +230,425 @@ Professional, Modern & Clean Design
     background: linear-gradient(90deg, var(--primary-blue), var(--primary-blue-light));
 }
 
+.metric-card.kpi-variant-gold::before {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+.metric-card.kpi-variant-success::before {
+    background: linear-gradient(90deg, #059669, #10b981);
+}
+.metric-card.kpi-variant-warning::before {
+    background: linear-gradient(90deg, #d97706, #f59e0b);
+}
+.metric-card.kpi-variant-danger::before {
+    background: linear-gradient(90deg, #dc2626, #ef4444);
+}
+.metric-card.kpi-variant-indigo::before {
+    background: linear-gradient(90deg, #4f46e5, #6366f1);
+}
+
 .metric-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
-    border-color: var(--primary-blue-light);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 26px rgba(15, 23, 42, 0.11);
+    border-color: rgba(53, 132, 228, 0.35);
 }
 
 .metric-card .metric-label {
-    font-size: 0.95rem;
+    font-size: 0.8rem;
     color: var(--text-muted);
-    font-weight: 600;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 0.8rem;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.45rem;
 }
 
 .metric-card .metric-value {
-    font-size: 2.2rem;
+    font-size: 1.72rem;
     font-weight: 800;
-    background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-light));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    margin: 0.5rem 0;
+    color: var(--kpi-value-color);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    margin: 0.2rem 0;
 }
 
 .metric-card .metric-delta {
-    font-size: 0.9rem;
-    font-weight: 600;
-    padding: 0.4rem 0.8rem;
-    border-radius: 20px;
-    display: inline-block;
-    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 0.22rem 0.65rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    width: fit-content;
+    margin-top: 0.4rem;
 }
 
 .metric-delta.positive {
-    background: rgba(76, 175, 80, 0.15);
-    color: #2e7d32;
+    background: rgba(16, 185, 129, 0.14);
+    color: #047857;
 }
 
 .metric-delta.negative {
-    background: rgba(239, 83, 80, 0.15);
-    color: #c62828;
+    background: rgba(239, 68, 68, 0.14);
+    color: #b91c1c;
 }
 
-/* === Info Boxes === */
+.metric-delta.neutral {
+    background: rgba(59, 130, 246, 0.12);
+    color: #1d4ed8;
+}
+
+.kpi-subtitle {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 0.35rem;
+}
+
+/* Native st.metric styling */
+[data-testid="stMetric"] {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 0.95rem 1.1rem;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+}
+
+[data-testid="stMetricValue"] {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+}
+
+/* === Feature Cards (Home) === */
+.feature-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-card);
+    padding: 1.5rem 1.35rem;
+    box-shadow: var(--shadow-card);
+    min-height: 190px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+    margin-bottom: 0.85rem;
+}
+
+.feature-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 26px rgba(15, 23, 42, 0.10);
+    border-color: rgba(53, 132, 228, 0.35);
+}
+
+.feature-card-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: rgba(26, 95, 180, 0.10);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.45rem;
+    margin-bottom: 0.9rem;
+}
+
+.feature-card-title {
+    color: var(--heading-accent) !important;
+    font-size: 1.08rem !important;
+    font-weight: 700 !important;
+    margin: 0 0 0.45rem 0 !important;
+}
+
+.feature-card-desc {
+    color: var(--text-muted) !important;
+    font-size: 0.9rem !important;
+    line-height: 1.55 !important;
+    margin: 0 !important;
+}
+
+/* === Callout / Info Boxes === */
+.info-box,
+.warning-box,
+.success-box,
+.danger-box,
+.note-box {
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    margin: 1rem 0;
+    font-size: 0.94rem;
+    line-height: 1.6;
+    color: var(--text-dark);
+}
+
 .info-box {
-    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-    border-left: 5px solid var(--primary-blue);
-    border-radius: 12px;
-    padding: 1.5rem;
-    margin: 1.5rem 0;
-    box-shadow: 0 4px 12px rgba(26, 95, 180, 0.1);
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border-left: 4px solid var(--primary-blue);
 }
 
-.warning-box {
-    background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
-    border-left: 5px solid var(--accent-orange);
-    border-radius: 12px;
-    padding: 1.5rem;
-    margin: 1.5rem 0;
-    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.1);
+.warning-box,
+.note-box {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border-left: 4px solid var(--accent-amber);
 }
 
 .success-box {
-    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-    border-left: 5px solid var(--success-green);
-    border-radius: 12px;
-    padding: 1.5rem;
-    margin: 1.5rem 0;
-    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.1);
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    border-left: 4px solid var(--success-green);
 }
 
 .danger-box {
-    background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
-    border-left: 5px solid var(--danger-red);
-    border-radius: 12px;
-    padding: 1.5rem;
-    margin: 1.5rem 0;
-    box-shadow: 0 4px 12px rgba(239, 83, 80, 0.1);
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    border-left: 4px solid var(--danger-red);
 }
 
-/* === Enhanced Buttons === */
-div.stButton > button {
-    background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-light) 100%);
-    color: white;
-    border: none;
-    border-radius: 12px;
-    padding: 0.75rem 2rem;
-    font-weight: 600;
-    font-size: 1rem;
-    box-shadow: 0 4px 12px rgba(26, 95, 180, 0.3);
-    transition: all 0.3s ease;
-    cursor: pointer;
-}
-
-div.stButton > button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(26, 95, 180, 0.4);
-    background: linear-gradient(135deg, var(--primary-blue-light) 0%, var(--primary-blue) 100%);
-}
-
-div.stButton > button:active {
-    transform: translateY(0px);
-    box-shadow: 0 2px 8px rgba(26, 95, 180, 0.3);
-}
-
-/* === Enhanced Expanders === */
-.streamlit-expanderHeader {
-    background: var(--card-bg);
-    border-radius: 12px;
-    border: 2px solid var(--gray-medium);
-    font-weight: 600;
-    font-size: 1.05rem;
+.formula-box {
+    background: var(--gray-light);
+    border: 1.5px solid rgba(26, 95, 180, 0.35);
+    border-left: 5px solid var(--primary-blue);
+    border-radius: 10px;
+    padding: 0.95rem 1.2rem;
+    margin: 0.75rem 0;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+    font-size: 0.96rem;
     color: var(--text-dark);
-    padding: 1rem 1.5rem;
-    transition: all 0.3s ease;
 }
 
-.streamlit-expanderHeader:hover {
-    border-color: var(--primary-blue-light);
-    background: rgba(26, 95, 180, 0.03);
+/* === Main Content Buttons (Primary vs Secondary Hierarchy) === */
+[data-testid="stMain"] div.stButton > button[kind="primary"],
+[data-testid="stMain"] [data-testid="stFormSubmitButton"] > button[kind="primary"] {
+    background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-light) 100%);
+    color: #ffffff !important;
+    border: none;
+    border-radius: 10px;
+    padding: 0.55rem 1.35rem;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(26, 95, 180, 0.25);
+    transition: all 0.2s ease;
 }
 
-.streamlit-expanderContent {
-    border: 2px solid var(--gray-medium);
-    border-top: none;
-    border-radius: 0 0 12px 12px;
-    padding: 1.5rem;
+[data-testid="stMain"] div.stButton > button[kind="primary"]:hover,
+[data-testid="stMain"] [data-testid="stFormSubmitButton"] > button[kind="primary"]:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(26, 95, 180, 0.35);
+}
+
+[data-testid="stMain"] div.stButton > button:not([kind="primary"]) {
     background: var(--card-bg);
+    color: var(--text-dark);
+    border: 1.5px solid var(--gray-medium);
+    border-radius: 10px;
+    padding: 0.55rem 1.25rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
 }
 
-/* === DataFrames === */
+[data-testid="stMain"] div.stButton > button:not([kind="primary"]):hover {
+    border-color: var(--primary-blue-light);
+    background: rgba(26, 95, 180, 0.05);
+    color: var(--primary-blue);
+}
+
+/* === Sidebar Branding & Grouped Navigation === */
+section[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, var(--sidebar-start) 0%, #122844 55%, var(--sidebar-end) 100%) !important;
+    box-shadow: 4px 0 24px rgba(2, 6, 23, 0.22) !important;
+}
+
+section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
+    padding-top: 1rem;
+}
+
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.85rem 0.9rem;
+    margin-bottom: 0.75rem;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 14px;
+    backdrop-filter: blur(8px);
+}
+
+.sidebar-brand-logo {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+    flex-shrink: 0;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
+}
+
+.sidebar-brand-title {
+    color: #ffffff !important;
+    font-size: 1.15rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.03em;
+    line-height: 1.15;
+    margin: 0 !important;
+}
+
+.sidebar-brand-sub {
+    color: #fde68a !important;
+    font-size: 0.72rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.03em;
+    margin: 0.18rem 0 0 0 !important;
+}
+
+.sidebar-group-label {
+    color: rgba(253, 230, 138, 0.82) !important;
+    font-size: 0.68rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: 0.9rem 0 0.3rem 0.35rem !important;
+}
+
+/* Sidebar widget label (Mode Tampilan) */
+section[data-testid="stSidebar"] [data-testid="stWidgetLabel"],
+section[data-testid="stSidebar"] [data-testid="stWidgetLabel"] * {
+    color: rgba(241, 245, 249, 0.88) !important;
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+}
+
+section[data-testid="stSidebar"] div[data-baseweb="select"] > div {
+    background-color: rgba(255, 255, 255, 0.09) !important;
+    border: 1px solid rgba(255, 255, 255, 0.22) !important;
+    border-radius: 10px !important;
+}
+
+section[data-testid="stSidebar"] [data-baseweb="select"] > div,
+section[data-testid="stSidebar"] [data-baseweb="select"] span {
+    color: #ffffff !important;
+    font-size: 0.86rem !important;
+}
+
+section[data-testid="stSidebar"] [data-baseweb="select"] svg {
+    fill: #ffffff !important;
+}
+
+/* Sidebar Nav Buttons — Inactive */
+section[data-testid="stSidebar"] .stButton > button:not([kind="primary"]) {
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: rgba(248, 250, 252, 0.92) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 10px !important;
+    min-height: 39px !important;
+    height: auto !important;
+    width: 100% !important;
+    padding: 0.42rem 0.8rem !important;
+    margin: 1px 0 !important;
+    font-weight: 500 !important;
+    font-size: 0.88rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+    box-shadow: none !important;
+    transition: all 0.18s ease !important;
+}
+
+section[data-testid="stSidebar"] .stButton > button:not([kind="primary"]) * {
+    color: rgba(248, 250, 252, 0.92) !important;
+}
+
+section[data-testid="stSidebar"] .stButton > button:not([kind="primary"]):hover {
+    background: rgba(255, 255, 255, 0.14) !important;
+    border-color: rgba(255, 215, 0, 0.42) !important;
+    transform: translateX(3px);
+}
+
+section[data-testid="stSidebar"] .stButton > button:not([kind="primary"]):hover * {
+    color: #ffffff !important;
+}
+
+/* Sidebar Nav Buttons — Active Page (kind="primary") */
+section[data-testid="stSidebar"] .stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, #ffd700 0%, #f59e0b 100%) !important;
+    color: #0b192c !important;
+    border: 1px solid #fde047 !important;
+    border-radius: 10px !important;
+    min-height: 40px !important;
+    height: auto !important;
+    width: 100% !important;
+    padding: 0.45rem 0.85rem !important;
+    margin: 2px 0 !important;
+    font-weight: 700 !important;
+    font-size: 0.89rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+    box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35) !important;
+}
+
+section[data-testid="stSidebar"] .stButton > button[kind="primary"] * {
+    color: #0b192c !important;
+    font-weight: 700 !important;
+}
+
+.sidebar-footer {
+    text-align: center;
+    color: rgba(226, 232, 240, 0.68);
+    font-size: 0.76rem;
+    padding: 0.75rem 0.4rem 0.5rem 0.4rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    margin-top: 0.9rem;
+}
+
+/* === Expanders, Tabs, Inputs, Charts & DataFrames === */
+[data-testid="stExpander"] {
+    border-radius: 12px !important;
+    border: 1px solid var(--card-border) !important;
+    background: var(--card-bg) !important;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+    overflow: hidden;
+}
+
 .stDataFrame {
     border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--card-border);
 }
 
-/* === Plotly Charts === */
 .js-plotly-plot {
-    border-radius: 12px;
+    border-radius: 14px;
     overflow: hidden;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
     background: var(--card-bg);
-    padding: 1rem;
+    border: 1px solid var(--card-border);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+    padding: 0.5rem;
 }
 
-/* === Tabs === */
+[data-testid="stMain"] [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlockBorderWrapper"] .js-plotly-plot {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+}
+
 .stTabs [data-baseweb="tab-list"] {
-    gap: 8px;
+    gap: 6px;
     background: var(--card-bg);
-    padding: 0.5rem;
+    padding: 0.4rem;
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    border: 1px solid var(--card-border);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    flex-wrap: wrap;
 }
 
 .stTabs [data-baseweb="tab"] {
-    height: 50px;
+    height: 42px;
     background-color: transparent;
     border-radius: 8px;
-    color: var(--text-dark);
+    color: var(--text-secondary);
     font-weight: 600;
-    padding: 0 1.5rem;
-    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    padding: 0 1.1rem;
+    transition: all 0.2s ease;
 }
 
 .stTabs [data-baseweb="tab"]:hover {
@@ -285,162 +657,94 @@ div.stButton > button:active {
 
 .stTabs [aria-selected="true"] {
     background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-light) 100%) !important;
-    color: white !important;
+    color: #ffffff !important;
 }
 
-/* === Select Boxes === */
-.stSelectbox > div > div {
-    border-radius: 10px;
-    border: 2px solid var(--gray-medium);
-    transition: all 0.3s ease;
+.stTabs [aria-selected="true"] * {
+    color: #ffffff !important;
 }
 
-.stSelectbox > div > div:hover {
-    border-color: var(--primary-blue-light);
-}
-
-/* === Number Input === */
-.stNumberInput > div > div > input {
-    border-radius: 10px;
-    border: 2px solid var(--gray-medium);
-    transition: all 0.3s ease;
-}
-
-.stNumberInput > div > div > input:focus {
-    border-color: var(--primary-blue-light);
-    box-shadow: 0 0 0 3px rgba(26, 95, 180, 0.1);
-}
-
-/* === Slider === */
-.stSlider > div > div > div > div {
-    background: var(--primary-blue-light);
-}
-
-/* === Badges === */
+/* Badges */
 .badge {
-    display: inline-block;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-weight: 600;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.7rem;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.76rem;
+    letter-spacing: 0.03em;
 }
 
 .badge-primary {
-    background: rgba(26, 95, 180, 0.15);
+    background: rgba(26, 95, 180, 0.12);
     color: var(--primary-blue);
 }
 
 .badge-success {
-    background: rgba(76, 175, 80, 0.15);
-    color: #2e7d32;
+    background: rgba(16, 185, 129, 0.14);
+    color: #047857;
 }
 
 .badge-warning {
-    background: rgba(255, 152, 0, 0.15);
-    color: #e65100;
+    background: rgba(245, 158, 11, 0.16);
+    color: #b45309;
 }
 
 .badge-danger {
-    background: rgba(239, 83, 80, 0.15);
-    color: #c62828;
+    background: rgba(239, 68, 68, 0.14);
+    color: #b91c1c;
 }
 
-/* === Loading Spinner === */
-.stSpinner > div {
-    border-top-color: var(--primary-blue) !important;
-}
-
-/* === Progress Bar === */
-.stProgress > div > div > div > div {
-    background: linear-gradient(90deg, var(--primary-blue), var(--primary-blue-light));
-}
-
-/* === Section Divider === */
+/* Section Divider */
 .section-divider {
-    height: 2px;
-    background: linear-gradient(90deg, transparent, var(--primary-blue-light), transparent);
-    margin: 3rem 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(26, 95, 180, 0.28), transparent);
+    margin: 2rem 0;
     border: none;
 }
 
-/* === Tooltips === */
-.tooltip-icon {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    background: var(--primary-blue-light);
-    color: white;
-    border-radius: 50%;
-    text-align: center;
-    line-height: 20px;
-    font-size: 12px;
-    font-weight: bold;
-    margin-left: 5px;
-    cursor: help;
-}
-
-/* === Sidebar widget (sidebar selalu dark gradient di kedua mode) === */
-section[data-testid="stSidebar"] .stSelectbox > div > div {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.25);
-}
-
-section[data-testid="stSidebar"] [data-baseweb="select"] > div,
-section[data-testid="stSidebar"] [data-baseweb="select"] span {
-    color: #ffffff;
-}
-
-section[data-testid="stSidebar"] [data-baseweb="select"] svg {
-    fill: #ffffff;
-}
-
-/* === Animations === */
+/* Animations */
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .fade-in {
-    animation: fadeIn 0.6s ease-out;
-}
-
-@keyframes slideInRight {
-    from {
-        opacity: 0;
-        transform: translateX(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-.slide-in-right {
-    animation: slideInRight 0.5s ease-out;
+    animation: fadeIn 0.35s ease-out;
 }
 
 /* === Responsive Design === */
 @media (max-width: 768px) {
+    .block-container {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        padding-top: 1.25rem !important;
+    }
+
+    .gradient-header {
+        padding: 1.3rem 1.25rem;
+    }
+
     .gradient-header h1 {
-        font-size: 1.8rem;
+        font-size: 1.45rem !important;
     }
 
     .gradient-header p {
-        font-size: 1rem;
+        font-size: 0.88rem !important;
+    }
+
+    .page-hero-icon {
+        width: 42px;
+        height: 42px;
+        font-size: 1.35rem;
+    }
+
+    .metric-card {
+        min-height: 118px;
+        padding: 1rem;
     }
 
     .metric-card .metric-value {
-        font-size: 1.8rem;
+        font-size: 1.45rem;
     }
 }
-
-/* Dark mode: dikelola oleh utils/theme_mode.py + assets/dark_theme.css
-   (mode auto mengikuti prefers-color-scheme browser client) */

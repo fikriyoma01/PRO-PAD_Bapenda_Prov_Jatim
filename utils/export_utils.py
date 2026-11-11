@@ -53,10 +53,10 @@ def create_comprehensive_excel_report(
                 'Contact'
             ],
             'Value': [
-                'PAD Dashboard - Comprehensive Analysis Report',
+                'PRO-PAD Dashboard - Comprehensive Analysis Report',
                 datetime.now().strftime('%Y-%m-%d'),
                 datetime.now().strftime('%H:%M:%S'),
-                '1.0 (Enhanced)',
+                '2.0 (Bapenda Jawa Timur)',
                 '2018-2024 (7 years)',
                 '2025-2026',
                 'Linear Regression (OLS) + Macroeconomic Impact',
@@ -94,7 +94,7 @@ def create_comprehensive_excel_report(
                 'High variability',
                 'Macro variables: trend regression vs Year',
                 'Response: regression vs Macro variable',
-                'Optimis = Pred × 0.95 | Moderat = Pred | Pesimis = Pred × 1.05',
+                'Optimis = Pred × 1.05 | Moderat = Pred | Pesimis = Pred × 0.95 (atau Data-Driven Ensemble)',
                 'Historical PAD data: Bapenda archives',
                 'Macro variables: BPS, BI, and related agencies'
             ]

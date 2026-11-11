@@ -1,561 +1,467 @@
-import streamlit as st
-import pandas as pd
-import statsmodels.api as sm
-import plotly.express as px
-import plotly.graph_objects as go
+"""
+Proyeksi 2025–2026 Page — Peramalan Skenario, Confidence Interval 95%, dan Ensemble Multi-Model
+"""
+
 import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
+import statsmodels.api as sm
+import streamlit as st
 
 from data_loader import load_pad_historis
+from utils.audit_utils import log_projection
+from utils.ensemble_models import compare_models, ensemble_forecast, explain_model
 from utils.scenario_utils import (
     calculate_ensemble_scenario_bounds,
+    explain_scenario_method,
     format_scenario_comparison,
-    explain_scenario_method
 )
-from utils.audit_utils import log_projection
-from utils.ensemble_models import (
-    ensemble_forecast,
-    compare_models,
-    explain_model
+from utils.ui_components import (
+    apply_plotly_theme,
+    create_header_with_icon,
+    render_kpi_card,
+    render_page_header,
+    render_section_divider,
 )
+from utils.ui_theme_utils import format_rupiah_compact, format_rupiah_full
 
-# Data historis (2018-2024) dari layer CSV
-df = load_pad_historis()
-
-def local_css():
-    st.markdown(
-        """
-        <style>
-            .metric-box {
-                border-radius: 12px;
-                padding: 1.5rem;
-                text-align: center;
-                font-weight: bold;
-                font-size: 1.2rem;
-                color: white;
-                margin: 8px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            }
-            .metric-koef {
-                background: linear-gradient(135deg, #64b5f6, #1976d2);
-            }
-            .metric-r2 {
-                background: linear-gradient(135deg, #81c784, #388e3c);
-            }
-            .metric-pval {
-                background: linear-gradient(135deg, #ffb74d, #f57c00);
-            }
-            .metric-box span {
-                display: block;
-                font-size: 1.8rem;
-                margin-top: 6px;
-            }
-            .note-box {
-                background: #fff8e1;
-                border-left: 6px solid #fbc02d;
-                border-radius: 10px;
-                padding: 1rem;
-                margin: 1rem 0;
-                font-size: 0.95rem;
-                color: #4e342e;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            }
-            .note-box strong {
-                color: #e65100;
-            }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
+PREDICTORS = ["PDRB", "Rasio Gini", "IPM", "TPT", "Kemiskinan", "Inflasi", "Suku Bunga"]
 
 
-def run_regression(response: str, predictor: str):
+def run_regression(df: pd.DataFrame, response: str, predictor: str):
     X = sm.add_constant(df[[predictor]])
     y = df[response]
     return sm.OLS(y, X).fit()
 
 
-def show_projection_page():
-    local_css()
-    st.markdown("""
-    <div style='background: linear-gradient(90deg, #1a5fb4, #3584e4); 
-                padding: 15px; border-radius: 10px; margin-bottom: 25px;'>
-        <h1 style='color: white; margin: 0;'>🔮 Proyeksi 2025–2026</h1>
-        <p style='color: #f1f1f1; margin: 0;'>PKB & BBNKB dengan 3 skenario</p>
-    </div>
-    """, unsafe_allow_html=True)
+def show_projection_page() -> None:
+    df = load_pad_historis()
+    available_predictors = [p for p in PREDICTORS if p in df.columns]
 
-    # Pilih respon & prediktor
-    response = st.selectbox("Pilih Variabel Respon", ["PKB", "BBNKB"])
-    predictors = ["PDRB", "Rasio Gini", "IPM", "TPT", "Kemiskinan", "Inflasi", "Suku Bunga"]
-    predictor = st.selectbox("Pilih Variabel Prediktor untuk Proyeksi", predictors)
-
-    # --- Prediksi otomatis nilai makro 2025 & 2026 (linear trend terhadap tahun)
-    X_tahun = sm.add_constant(df["Tahun"])
-    y_var = df[predictor]
-    trend_model = sm.OLS(y_var, X_tahun).fit()
-    pred_2025 = trend_model.predict([1, 2025])[0]
-    pred_2026 = trend_model.predict([1, 2026])[0]
-
-    # --- Scenario Method Selection
-    st.subheader("⚙️ Konfigurasi Skenario")
-
-    scenario_method = st.radio(
-        "Metode Perhitungan Skenario",
-        ["Traditional (±5%)", "Data-Driven (Recommended)"],
-        help="Traditional menggunakan ±5% fixed, Data-Driven menggunakan historical volatility & CI"
+    render_page_header(
+        title="Proyeksi PAD Tahun 2025–2026",
+        subtitle="Estimasi PKB & BBNKB dengan 3 skenario (Optimis, Moderat, Pesimis), Confidence Interval 95%, dan komparasi Ensemble",
+        icon="📈",
     )
 
-    if scenario_method == "Data-Driven (Recommended)":
-        with st.expander("ℹ️ Tentang Data-Driven Scenarios"):
-            st.markdown("""
-            **Data-Driven Scenarios** menghitung bounds berdasarkan:
-            1. **Historical Volatility**: Standar deviasi dari returns historis
-            2. **Confidence Intervals**: Prediction intervals dari model regresi
-            3. **Percentiles**: Distribusi empiris dari growth rates
+    # --- Panel Konfigurasi Proyeksi ---
+    with st.container(border=True):
+        c1, c2 = st.columns(2)
+        with c1:
+            response = st.selectbox("📌 Pilih Variabel Respon", ["PKB", "BBNKB"])
+        with c2:
+            predictor = st.selectbox("📌 Pilih Variabel Prediktor Makro", available_predictors)
 
-            **Ensemble Method** (default) mengambil rata-rata dari 3 metode di atas untuk hasil yang lebih robust.
+        # Estimasi tren linear otomatis untuk default nilai prediktor 2025 & 2026
+        X_tahun = sm.add_constant(df["Tahun"])
+        trend_model = sm.OLS(df[predictor], X_tahun).fit()
+        pred_2025 = float(trend_model.predict([1, 2025])[0])
+        pred_2026 = float(trend_model.predict([1, 2026])[0])
 
-            **Keuntungan**: Bounds mencerminkan ketidakpastian aktual dalam data, bukan arbitrary ±5%
-            """)
+        st.markdown("##### ⚙️ Metode Skenario & Asumsi Nilai Makro")
+        m1, m2, m3 = st.columns([1.4, 1, 1])
+        with m1:
+            scenario_method = st.radio(
+                "Metode Perhitungan Batas Skenario",
+                ["Data-Driven (Recommended)", "Traditional (±5%)"],
+                help="Data-Driven menghitung rentang berdasarkan volatilitas historis, CI model, dan persentil pertumbuhan.",
+            )
+        with m2:
+            val_2025 = st.number_input(
+                f"Asumsi {predictor} 2025",
+                value=round(pred_2025, 3),
+                step=0.1,
+                format="%.3f",
+            )
+        with m3:
+            val_2026 = st.number_input(
+                f"Asumsi {predictor} 2026",
+                value=round(pred_2026, 3),
+                step=0.1,
+                format="%.3f",
+            )
 
-    # --- Input nilai makro (default dari prediksi, tapi bisa diubah manual)
-    st.subheader("📥 Input Proyeksi Variabel Makro")
-    val_2025 = st.number_input(f"{predictor} Tahun 2025", value=float(pred_2025))
-    val_2026 = st.number_input(f"{predictor} Tahun 2026", value=float(pred_2026))
+    model = run_regression(df, response, predictor)
 
-    # Jalankan regresi sederhana
-    model = run_regression(response, predictor)
-
-    # --- Prediksi 2025 & 2026 untuk respon dengan confidence intervals
     proj = {}
-    ci_data = {}  # Untuk menyimpan confidence intervals
-    all_scenario_methods = {}  # Untuk perbandingan metode
+    ci_data = {}
+    all_scenario_methods = {}
 
     for tahun, val in zip([2025, 2026], [val_2025, val_2026]):
-        # Prediksi nilai
-        pred_input = np.array([[1, val]])
-        pred = model.predict(pred_input)[0]
-
-        # Hitung confidence interval (95%)
-        pred_summary = model.get_prediction(pred_input)
-        ci = pred_summary.conf_int(alpha=0.05)[0]  # 95% CI
+        pred_input = np.array([[1.0, float(val)]])
+        pred = float(model.predict(pred_input)[0])
+        ci = model.get_prediction(pred_input).conf_int(alpha=0.05)[0]
 
         ci_data[tahun] = {
-            "lower": ci[0],
-            "upper": ci[1],
-            "mean": pred
+            "lower": float(ci[0]),
+            "upper": float(ci[1]),
+            "mean": pred,
         }
 
-        # Pilih metode skenario berdasarkan user input
         if scenario_method == "Data-Driven (Recommended)":
-            # Hitung ensemble scenario bounds
             scenarios = calculate_ensemble_scenario_bounds(
                 df=df,
                 model=model,
                 response=response,
                 X_pred=pred_input,
                 prediction=pred,
-                method='average'
+                method="average",
             )
-
-            # Gunakan ensemble method
-            opt, mod, pes = scenarios['ensemble']
-
-            # Simpan semua metode untuk perbandingan
+            opt, mod, pes = scenarios["ensemble"]
             all_scenario_methods[tahun] = scenarios
-
             proj[tahun] = {
-                "Optimis (Batas Atas)": opt,
-                "Moderat (Rata-rata)": mod,
-                "Pesimis (Batas Bawah)": pes
+                "Optimis (Batas Atas)": float(opt),
+                "Moderat (Rata-rata)": float(mod),
+                "Pesimis (Batas Bawah)": float(pes),
             }
         else:
-            # Traditional ±5%
             proj[tahun] = {
                 "Optimis (Batas Atas)": pred * 1.05,
                 "Moderat (Rata-rata)": pred,
-                "Pesimis (Batas Bawah)": pred * 0.95
+                "Pesimis (Batas Bawah)": pred * 0.95,
             }
 
-        # Log projection to audit trail
         log_projection(
             response=response,
             year=tahun,
             value=float(proj[tahun]["Moderat (Rata-rata)"]),
             scenario=scenario_method,
             details={
-                'predictor': predictor,
-                'predictor_value': float(val),
-                'optimistic': float(proj[tahun]["Optimis (Batas Atas)"]),
-                'pessimistic': float(proj[tahun]["Pesimis (Batas Bawah)"])
-            }
+                "predictor": predictor,
+                "predictor_value": float(val),
+                "optimistic": float(proj[tahun]["Optimis (Batas Atas)"]),
+                "pessimistic": float(proj[tahun]["Pesimis (Batas Bawah)"]),
+            },
         )
 
-    # --- Tabel hasil proyeksi
-    st.subheader("📊 Hasil Proyeksi")
-    proj_df = pd.DataFrame(proj).T
-
-    # Tambahkan confidence intervals ke tabel
-    ci_df = pd.DataFrame(ci_data).T
-    ci_df.columns = ['CI Lower (95%)', 'CI Upper (95%)', 'Prediksi Tengah']
-    ci_df = ci_df[['Prediksi Tengah', 'CI Lower (95%)', 'CI Upper (95%)']]
-
-    # Gabungkan dengan proyeksi skenario
-    combined_df = pd.concat([proj_df, ci_df], axis=1)
-    st.dataframe(combined_df.style.format("{:,.0f}"), use_container_width=True)
-
-    # Penjelasan Confidence Interval
-    with st.expander("ℹ️ Apa itu Confidence Interval (CI)?"):
-        st.markdown("""
-        **Confidence Interval (CI) 95%** menunjukkan rentang di mana kita yakin 95% bahwa nilai sebenarnya akan berada.
-
-        - **CI Lower**: Batas bawah interval kepercayaan (lebih konservatif)
-        - **CI Upper**: Batas atas interval kepercayaan (lebih optimis)
-        - **Prediksi Tengah**: Nilai prediksi paling mungkin
-
-        Semakin lebar interval CI, semakin tinggi ketidakpastian proyeksi. Dengan hanya 7 tahun data (2018-2024),
-        interval CI cenderung lebih lebar dibanding jika kita memiliki lebih banyak data historis.
-
-        **Catatan**: CI berbeda dengan skenario Optimis/Moderat/Pesimis. CI dihitung berdasarkan statistik model,
-        sedangkan skenario dapat dihitung dengan metode Traditional (±5%) atau Data-Driven (berbasis volatilitas historis).
-        """)
-
-    # --- Perbandingan Metode Skenario (untuk Data-Driven)
-    if scenario_method == "Data-Driven (Recommended)" and all_scenario_methods:
-        st.markdown("---")
-        st.subheader("🔬 Perbandingan Metode Perhitungan Skenario")
-
-        # Pilih tahun untuk ditampilkan
-        compare_year = st.selectbox(
-            "Pilih tahun untuk perbandingan detail:",
-            [2025, 2026],
-            key="compare_year_scenarios"
-        )
-
-        scenarios = all_scenario_methods[compare_year]
-
-        # Format comparison table
-        comparison_df = format_scenario_comparison(scenarios)
-        st.dataframe(comparison_df, use_container_width=True, hide_index=True)
-
-        # Penjelasan metode yang dipilih
-        tabs = st.tabs(["Volatility", "Confidence Interval", "Percentile", "Ensemble"])
-
-        with tabs[0]:
-            st.markdown(explain_scenario_method('volatility'))
-
-        with tabs[1]:
-            st.markdown(explain_scenario_method('confidence_interval'))
-
-        with tabs[2]:
-            st.markdown(explain_scenario_method('percentile'))
-
-        with tabs[3]:
-            st.markdown(explain_scenario_method('ensemble'))
-
-        # Recommendation
-        st.info("💡 **Rekomendasi**: Metode **Ensemble** digunakan secara default karena menggabungkan kekuatan dari ketiga metode dan lebih robust terhadap outliers.")
-
-    # --- Visualisasi dengan Confidence Intervals
-    st.subheader("📈 Visualisasi Proyeksi dengan Confidence Intervals")
-
-    # Create figure using graph_objects for better control
-    fig = go.Figure()
-
-    # 1. Data Historis (Aktual)
-    hist_years = df["Tahun"].values
-    hist_values = df[response].values
-    fig.add_trace(go.Scatter(
-        x=hist_years,
-        y=hist_values,
-        mode='lines+markers',
-        name='Aktual',
-        line=dict(color='#1976d2', width=3),
-        marker=dict(size=8)
-    ))
-
-    # 2. Confidence Interval Band (Shaded Area)
-    last_year = int(df["Tahun"].max())
-    last_value = float(df.loc[df["Tahun"] == last_year, response].iloc[0])
-
-    ci_years = [last_year, 2025, 2026]
-    ci_upper = [last_value, ci_data[2025]['upper'], ci_data[2026]['upper']]
-    ci_lower = [last_value, ci_data[2025]['lower'], ci_data[2026]['lower']]
-
-    # Upper bound
-    fig.add_trace(go.Scatter(
-        x=ci_years,
-        y=ci_upper,
-        mode='lines',
-        name='CI Upper (95%)',
-        line=dict(width=0),
-        showlegend=False,
-        hoverinfo='skip'
-    ))
-
-    # Lower bound with fill
-    fig.add_trace(go.Scatter(
-        x=ci_years,
-        y=ci_lower,
-        mode='lines',
-        name='Confidence Interval 95%',
-        line=dict(width=0),
-        fillcolor='rgba(68, 68, 68, 0.15)',
-        fill='tonexty',
-        hovertemplate='CI: %{y:,.0f}<extra></extra>'
-    ))
-
-    # 3. Skenario Proyeksi
-    proj_years = [last_year, 2025, 2026]
-
-    # Moderat (Prediksi Tengah)
-    moderat_values = [last_value, proj[2025]["Moderat (Rata-rata)"], proj[2026]["Moderat (Rata-rata)"]]
-    fig.add_trace(go.Scatter(
-        x=proj_years,
-        y=moderat_values,
-        mode='lines+markers',
-        name='Moderat (Rata-rata)',
-        line=dict(color='#388e3c', width=2, dash='dash'),
-        marker=dict(size=8, symbol='diamond')
-    ))
-
-    # Optimis (Batas Atas = nilai lebih tinggi)
-    optimis_values = [last_value, proj[2025]["Optimis (Batas Atas)"], proj[2026]["Optimis (Batas Atas)"]]
-    fig.add_trace(go.Scatter(
-        x=proj_years,
-        y=optimis_values,
-        mode='lines+markers',
-        name='Optimis (Batas Atas)',
-        line=dict(color='#4caf50', width=2, dash='dot'),
-        marker=dict(size=7)
-    ))
-
-    # Pesimis (Batas Bawah = nilai lebih rendah)
-    pesimis_values = [last_value, proj[2025]["Pesimis (Batas Bawah)"], proj[2026]["Pesimis (Batas Bawah)"]]
-    fig.add_trace(go.Scatter(
-        x=proj_years,
-        y=pesimis_values,
-        mode='lines+markers',
-        name='Pesimis (Batas Bawah)',
-        line=dict(color='#f57c00', width=2, dash='dot'),
-        marker=dict(size=7)
-    ))
-
-    # Layout
-    fig.update_layout(
-        title=f"Proyeksi {response} 2018-2026 ({predictor} sebagai prediktor)<br><sub>Area abu-abu = Confidence Interval 95%</sub>",
-        xaxis=dict(
-            title="Tahun",
-            tickmode="array",
-            tickvals=list(range(2018, 2027)),
-            dtick=1
-        ),
-        yaxis=dict(
-            title=f"{response} (Rupiah)",
-            tickformat=",.0f"
-        ),
-        template="plotly_white",
-        hovermode='x unified',
-        height=750,
-        margin=dict(l=100, r=100, t=120, b=100),
-        legend=dict(
-            orientation="v",
-            yanchor="top",
-            y=0.99,
-            xanchor="left",
-            x=0.01,
-            bgcolor="rgba(255, 255, 255, 0.8)"
-        )
+    # --- KPI Ringkasan Proyeksi ---
+    create_header_with_icon(
+        f"Ringkasan Proyeksi {response} (2025–2026)",
+        "🎯",
+        subtitle=f"Berdasarkan prediktor {predictor} dan metode {scenario_method}",
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    last_year = int(df["Tahun"].max())
+    last_actual = float(df.loc[df["Tahun"] == last_year, response].iloc[0])
+    mod_2025 = proj[2025]["Moderat (Rata-rata)"]
+    mod_2026 = proj[2026]["Moderat (Rata-rata)"]
+    g_2025 = ((mod_2025 - last_actual) / last_actual * 100) if last_actual else 0.0
+    g_2026 = ((mod_2026 - mod_2025) / mod_2025 * 100) if mod_2025 else 0.0
 
-    # Catatan tambahan
-    st.info("💡 **Area abu-abu** menunjukkan Confidence Interval 95%, yaitu rentang di mana nilai aktual kemungkinan besar akan berada berdasarkan model statistik.")
+    k1, k2, k3, k4 = st.columns(4)
+    with k1:
+        render_kpi_card(
+            label=f"Moderat {response} 2025",
+            value=format_rupiah_compact(mod_2025, respect_privacy=True),
+            delta=f"{g_2025:+.2f}% vs {last_year}",
+            delta_positive=g_2025 >= 0,
+            subtitle=format_rupiah_full(mod_2025),
+            icon="📅",
+            variant="primary",
+        )
+    with k2:
+        render_kpi_card(
+            label=f"Moderat {response} 2026",
+            value=format_rupiah_compact(mod_2026, respect_privacy=True),
+            delta=f"{g_2026:+.2f}% vs 2025",
+            delta_positive=g_2026 >= 0,
+            subtitle=format_rupiah_full(mod_2026),
+            icon="🚀",
+            variant="success",
+        )
+    with k3:
+        render_kpi_card(
+            label="Rentang Skenario 2025",
+            value=f"{format_rupiah_compact(proj[2025]['Pesimis (Batas Bawah)'], respect_privacy=True)} – {format_rupiah_compact(proj[2025]['Optimis (Batas Atas)'], respect_privacy=True)}",
+            subtitle="Pesimis s.d. Optimis 2025",
+            icon="↔️",
+            variant="warning",
+        )
+    with k4:
+        render_kpi_card(
+            label="Rentang Skenario 2026",
+            value=f"{format_rupiah_compact(proj[2026]['Pesimis (Batas Bawah)'], respect_privacy=True)} – {format_rupiah_compact(proj[2026]['Optimis (Batas Atas)'], respect_privacy=True)}",
+            subtitle="Pesimis s.d. Optimis 2026",
+            icon="↔️",
+            variant="indigo",
+        )
 
-    # --- Ensemble Models Comparison (Advanced) ---
-    st.markdown("---")
-    st.header("🔬 Advanced: Model Comparison")
+    # --- Tabel Detail Proyeksi & CI ---
+    create_header_with_icon("Tabel Proyeksi & Confidence Interval (95%)", "📋")
 
-    with st.expander("ℹ️ Tentang Model Ensemble"):
-        st.markdown("""
-        ### 📚 Apa itu Model Ensemble?
+    proj_df = pd.DataFrame(proj).T
+    ci_df = pd.DataFrame(ci_data).T[["mean", "lower", "upper"]]
+    ci_df.columns = ["Prediksi Tengah (OLS)", "CI Lower (95%)", "CI Upper (95%)"]
+    combined_df = pd.concat([proj_df, ci_df], axis=1)
+    combined_df.index.name = "Tahun"
 
-        **Model Ensemble** menggabungkan prediksi dari beberapa model berbeda untuk menghasilkan proyeksi yang lebih robust.
+    st.dataframe(
+        combined_df.style.format("Rp {:,.0f}"),
+        use_container_width=True,
+    )
 
-        **Model yang tersedia:**
-        1. **OLS Regression**: Model utama yang sudah digunakan (berbasis variabel makro)
-        2. **ARIMA**: Time series model yang melihat pola historis tanpa prediktor eksternal
-        3. **Exponential Smoothing**: Model sederhana yang memberikan bobot lebih pada data terbaru
+    with st.expander("ℹ️ Perbedaan Skenario Proyeksi vs Confidence Interval (CI) 95%"):
+        st.markdown(
+            """
+            - **Confidence Interval (CI) 95%** merupakan interval statistik regresi OLS di mana nilai rata-rata populasi diestimasi berada pada tingkat keyakinan 95%.
+            - **Skenario Optimis / Moderat / Pesimis** menerjemahkan ketidakpastian ke dalam perencanaan target fiskal:
+              - *Data-Driven* menggabungkan volatilitas historis, lebar CI model, dan persentil pertumbuhan historis.
+              - *Traditional (±5%)* menerapkan deviasi tetap `+5%` (Optimis) dan `-5%` (Pesimis) dari prediksi tengah.
+            """
+        )
 
-        **Keuntungan Ensemble:**
-        - Mengurangi risiko dari single model bias
-        - Memberikan perspektif berbeda (time series vs regression)
-        - Rata-rata dari multiple models lebih stabil
-        - Useful untuk uncertainty assessment
+    # --- Visualisasi Grafik Proyeksi + CI ---
+    create_header_with_icon(
+        "Visualisasi Lintasan Proyeksi & Confidence Interval",
+        "📈",
+        subtitle=f"Realisasi aktual 2018–{last_year} dilanjutkan proyeksi 2025–2026 beserta pita kepercayaan 95%",
+    )
 
-        **Keterbatasan dengan 7 data point:**
-        - ARIMA membutuhkan lebih banyak data untuk hasil optimal
-        - Model time series mungkin tidak reliable dengan sample kecil
-        - Gunakan sebagai **referensi tambahan**, bukan pengganti OLS
-        """)
+    with st.container(border=True):
+        fig = go.Figure()
 
-    if st.checkbox("🔍 Tampilkan Perbandingan Model Ensemble", value=False):
-        st.subheader("📊 Perbandingan Beberapa Model Forecasting")
+        # 1. Historis Aktual
+        fig.add_trace(
+            go.Scatter(
+                x=df["Tahun"].values,
+                y=df[response].values,
+                mode="lines+markers",
+                name="Realisasi Aktual",
+                line=dict(color="#1a5fb4", width=3.5),
+                marker=dict(size=8),
+                hovertemplate="Tahun %{x}<br>Aktual: Rp %{y:,.0f}<extra></extra>",
+            )
+        )
 
-        # Run ensemble forecast
-        with st.spinner("Running multiple models..."):
+        # 2. Pita Confidence Interval 95%
+        ci_years = [last_year, 2025, 2026]
+        ci_upper = [last_actual, ci_data[2025]["upper"], ci_data[2026]["upper"]]
+        ci_lower = [last_actual, ci_data[2025]["lower"], ci_data[2026]["lower"]]
+
+        fig.add_trace(
+            go.Scatter(
+                x=ci_years,
+                y=ci_upper,
+                mode="lines",
+                name="CI Upper (95%)",
+                line=dict(width=0),
+                showlegend=False,
+                hoverinfo="skip",
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=ci_years,
+                y=ci_lower,
+                mode="lines",
+                name="Confidence Interval 95%",
+                line=dict(width=0),
+                fillcolor="rgba(59, 130, 246, 0.18)",
+                fill="tonexty",
+                hovertemplate="Batas CI 95%: Rp %{y:,.0f}<extra></extra>",
+            )
+        )
+
+        # 3. Tiga Skenario Proyeksi
+        proj_years = [last_year, 2025, 2026]
+        fig.add_trace(
+            go.Scatter(
+                x=proj_years,
+                y=[last_actual, proj[2025]["Optimis (Batas Atas)"], proj[2026]["Optimis (Batas Atas)"]],
+                mode="lines+markers",
+                name="Optimis (Batas Atas)",
+                line=dict(color="#10b981", width=2.5, dash="dot"),
+                marker=dict(size=8, symbol="triangle-up"),
+                hovertemplate="Optimis %{x}: Rp %{y:,.0f}<extra></extra>",
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=proj_years,
+                y=[last_actual, proj[2025]["Moderat (Rata-rata)"], proj[2026]["Moderat (Rata-rata)"]],
+                mode="lines+markers",
+                name="Moderat (Utama)",
+                line=dict(color="#0ea5e9", width=3, dash="dash"),
+                marker=dict(size=9, symbol="diamond"),
+                hovertemplate="Moderat %{x}: Rp %{y:,.0f}<extra></extra>",
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=proj_years,
+                y=[last_actual, proj[2025]["Pesimis (Batas Bawah)"], proj[2026]["Pesimis (Batas Bawah)"]],
+                mode="lines+markers",
+                name="Pesimis (Batas Bawah)",
+                line=dict(color="#f59e0b", width=2.5, dash="dot"),
+                marker=dict(size=8, symbol="triangle-down"),
+                hovertemplate="Pesimis %{x}: Rp %{y:,.0f}<extra></extra>",
+            )
+        )
+
+        apply_plotly_theme(
+            fig,
+            title=f"Proyeksi {response} 2018–2026 (Prediktor: {predictor})",
+            height=480,
+            xaxis_title="Tahun",
+            yaxis_title=f"{response} (Rupiah)",
+            is_currency=True,
+        )
+        fig.update_xaxes(tickvals=list(range(int(df["Tahun"].min()), 2027)), dtick=1)
+        fig.update_layout(
+            hovermode="x unified",
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    # --- Rincian Metode Data-Driven ---
+    if scenario_method == "Data-Driven (Recommended)" and all_scenario_methods:
+        with st.expander("🔬 Lihat Rincian Komparasi 4 Metode Skenario Data-Driven", expanded=False):
+            compare_year = st.selectbox(
+                "Pilih tahun proyeksi:",
+                [2025, 2026],
+                key="compare_year_scenarios",
+            )
+            comparison_df = format_scenario_comparison(all_scenario_methods[compare_year])
+            st.dataframe(comparison_df, use_container_width=True, hide_index=True)
+
+            m_tabs = st.tabs(["Volatility", "Confidence Interval", "Percentile", "Ensemble"])
+            for tab, m_key in zip(m_tabs, ["volatility", "confidence_interval", "percentile", "ensemble"]):
+                with tab:
+                    st.markdown(explain_scenario_method(m_key))
+
+    render_section_divider()
+
+    # --- Perbandingan Ensemble Multi-Model ---
+    create_header_with_icon(
+        "Komparasi Ensemble Multi-Model (OLS, ARIMA & Exponential Smoothing)",
+        "🔬",
+        subtitle="Bandingkan peramalan berbasis indikator makro (OLS) dengan peramalan deret waktu murni",
+    )
+
+    show_ensemble = st.toggle("Tampilkan Analisis & Grafik Perbandingan Multi-Model", value=True)
+
+    if show_ensemble:
+        with st.spinner("Menjalankan model OLS, ARIMA, dan Exponential Smoothing..."):
             ensemble_results = ensemble_forecast(
                 df=df,
                 response=response,
                 predictor=predictor,
                 forecast_predictor_values=[val_2025, val_2026],
-                models_to_use=['ols', 'arima', 'exp_smoothing'],
+                models_to_use=["ols", "arima", "exp_smoothing"],
                 arima_order=(1, 1, 1),
-                forecast_steps=2
+                forecast_steps=2,
             )
 
-        # Display comparison table
         comparison_df = compare_models(ensemble_results)
         st.dataframe(comparison_df, use_container_width=True, hide_index=True)
 
-        # Show detailed results for each model
         tabs = st.tabs(["OLS Regression", "ARIMA", "Exponential Smoothing", "Ensemble Average"])
-
-        for idx, (tab, model_key) in enumerate(zip(tabs, ['ols', 'arima', 'exp_smoothing', 'ensemble'])):
+        for tab, model_key in zip(tabs, ["ols", "arima", "exp_smoothing", "ensemble"]):
             with tab:
-                if model_key in ensemble_results:
-                    model_result = ensemble_results[model_key]
-
-                    if model_result.get('success', False):
-                        # Explanation
-                        st.markdown(explain_model(model_key))
-
-                        # Forecast values
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            st.metric(
-                                "Proyeksi 2025",
-                                f"Rp {model_result['forecast'][0]/1e9:.2f}T"
+                model_result = ensemble_results.get(model_key, {})
+                if model_result.get("success", False):
+                    c_m1, c_m2 = st.columns(2)
+                    with c_m1:
+                        render_kpi_card(
+                            label=f"Proyeksi 2025 ({model_result.get('model', model_key.upper())})",
+                            value=format_rupiah_compact(model_result["forecast"][0], respect_privacy=True),
+                            subtitle=(
+                                f"95% CI: {format_rupiah_compact(model_result['forecast_lower'][0])} – "
+                                f"{format_rupiah_compact(model_result['forecast_upper'][0])}"
+                            ),
+                            variant="primary",
+                        )
+                    with c_m2:
+                        if len(model_result["forecast"]) > 1:
+                            render_kpi_card(
+                                label=f"Proyeksi 2026 ({model_result.get('model', model_key.upper())})",
+                                value=format_rupiah_compact(model_result["forecast"][1], respect_privacy=True),
+                                subtitle=(
+                                    f"95% CI: {format_rupiah_compact(model_result['forecast_lower'][1])} – "
+                                    f"{format_rupiah_compact(model_result['forecast_upper'][1])}"
+                                ),
+                                variant="success",
                             )
-                        with col2:
-                            if len(model_result['forecast']) > 1:
-                                st.metric(
-                                    "Proyeksi 2026",
-                                    f"Rp {model_result['forecast'][1]/1e9:.2f}T"
-                                )
-
-                        # Confidence intervals
-                        st.caption(f"**95% CI 2025**: Rp {model_result['forecast_lower'][0]/1e9:.2f}T - Rp {model_result['forecast_upper'][0]/1e9:.2f}T")
-                        if len(model_result['forecast']) > 1:
-                            st.caption(f"**95% CI 2026**: Rp {model_result['forecast_lower'][1]/1e9:.2f}T - Rp {model_result['forecast_upper'][1]/1e9:.2f}T")
-
-                        # Model-specific metrics
-                        if 'aic' in model_result:
-                            st.caption(f"**AIC**: {model_result['aic']:.2f}")
-                        if 'r_squared' in model_result:
-                            st.caption(f"**R²**: {model_result['r_squared']:.3f}")
-                        if 'models_used' in model_result:
-                            st.caption(f"**Models Combined**: {', '.join([m.upper() for m in model_result['models_used']])}")
-
-                    else:
-                        st.error(f"❌ Model gagal: {model_result.get('error', 'Unknown error')}")
+                    with st.expander(f"ℹ️ Penjelasan Metodologi {model_result.get('model', model_key.upper())}"):
+                        st.markdown(explain_model(model_key))
                 else:
-                    st.warning("Model tidak tersedia dalam hasil ensemble")
+                    st.warning(f"⚠️ Model `{model_key}` tidak dapat dijalankan: {model_result.get('error', 'Unknown error')}")
 
-        # Visualization comparing all models
-        st.subheader("📈 Visualisasi Perbandingan Model")
-
-        fig_compare = go.Figure()
-
-        # Historical data
-        fig_compare.add_trace(go.Scatter(
-            x=df["Tahun"].values,
-            y=df[response].values,
-            mode='lines+markers',
-            name='Aktual (Historis)',
-            line=dict(color='#1976d2', width=3),
-            marker=dict(size=8)
-        ))
-
-        # Add forecasts from each model
-        colors = {'ols': '#388e3c', 'arima': '#f57c00', 'exp_smoothing': '#8e24aa', 'ensemble': '#e91e63'}
-        last_year = int(df["Tahun"].max())
-        last_value = float(df.loc[df["Tahun"] == last_year, response].iloc[0])
-
-        for model_key, color in colors.items():
-            if model_key in ensemble_results and ensemble_results[model_key].get('success', False):
-                model_result = ensemble_results[model_key]
-                forecast_years = [last_year, 2025, 2026]
-                forecast_values = [last_value] + list(model_result['forecast'])
-
-                fig_compare.add_trace(go.Scatter(
-                    x=forecast_years,
-                    y=forecast_values,
-                    mode='lines+markers',
-                    name=model_result.get('model', model_key.upper()),
-                    line=dict(color=color, width=2, dash='dash'),
-                    marker=dict(size=7)
-                ))
-
-        fig_compare.update_layout(
-            title=f"Perbandingan Proyeksi {response} dari Multiple Models",
-            xaxis=dict(
-                title="Tahun",
-                tickmode="array",
-                tickvals=list(range(2018, 2027)),
-                dtick=1
-            ),
-            yaxis=dict(
-                title=f"{response} (Rupiah)",
-                tickformat=",.0f"
-            ),
-            template="plotly_white",
-            hovermode='x unified',
-            height=750,
-            margin=dict(l=100, r=100, t=120, b=100),
-            showlegend=True,
-            legend=dict(
-                orientation="v",
-                yanchor="top",
-                y=0.99,
-                xanchor="right",
-                x=0.99,
-                bgcolor="rgba(255, 255, 255, 0.9)"
+        with st.container(border=True):
+            fig_compare = go.Figure()
+            fig_compare.add_trace(
+                go.Scatter(
+                    x=df["Tahun"].values,
+                    y=df[response].values,
+                    mode="lines+markers",
+                    name="Aktual (Historis)",
+                    line=dict(color="#1a5fb4", width=3.5),
+                    marker=dict(size=8),
+                )
             )
-        )
 
-        st.plotly_chart(fig_compare, use_container_width=True)
+            model_colors = {
+                "ols": "#10b981",
+                "arima": "#f59e0b",
+                "exp_smoothing": "#6366f1",
+                "ensemble": "#ef4444",
+            }
+            for model_key, color in model_colors.items():
+                res = ensemble_results.get(model_key, {})
+                if res.get("success", False):
+                    fig_compare.add_trace(
+                        go.Scatter(
+                            x=[last_year, 2025, 2026],
+                            y=[last_actual] + list(res["forecast"]),
+                            mode="lines+markers",
+                            name=res.get("model", model_key.upper()),
+                            line=dict(
+                                color=color,
+                                width=3 if model_key == "ensemble" else 2.2,
+                                dash="solid" if model_key == "ensemble" else "dash",
+                            ),
+                            marker=dict(size=8),
+                            hovertemplate=f"<b>{res.get('model', model_key.upper())}</b> (%{{x}}): Rp %{{y:,.0f}}<extra></extra>",
+                        )
+                    )
 
-        # Insights
-        st.markdown("### 💡 Interpretasi")
+            apply_plotly_theme(
+                fig_compare,
+                title=f"Perbandingan Lintasan Proyeksi {response} Lintas Model",
+                height=460,
+                xaxis_title="Tahun",
+                yaxis_title=f"{response} (Rupiah)",
+                is_currency=True,
+            )
+            fig_compare.update_xaxes(tickvals=list(range(int(df["Tahun"].min()), 2027)), dtick=1)
+            fig_compare.update_layout(
+                hovermode="x unified",
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            )
+            st.plotly_chart(fig_compare, use_container_width=True)
 
-        successful_models = {k: v for k, v in ensemble_results.items()
-                           if v.get('success', False) and k != 'ensemble'}
-
+        successful_models = {
+            k: v for k, v in ensemble_results.items() if v.get("success", False) and k != "ensemble"
+        }
         if len(successful_models) > 1:
-            # Calculate variance across models
-            forecasts_2025 = [m['forecast'][0] for m in successful_models.values()]
-            avg_2025 = np.mean(forecasts_2025)
-            std_2025 = np.std(forecasts_2025)
-            cv_2025 = (std_2025 / avg_2025) * 100
-
-            st.info(f"""
-            📊 **Konsistensi Proyeksi 2025:**
-            - Rata-rata: Rp {avg_2025/1e9:.2f}T
-            - Standar Deviasi: Rp {std_2025/1e9:.2f}T
-            - Coefficient of Variation: {cv_2025:.1f}%
-
-            {'✅ Model cukup konsisten (CV < 10%)' if cv_2025 < 10 else '⚠️ Ada perbedaan signifikan antar model (CV > 10%)'}
-            """)
-
-            if 'ensemble' in ensemble_results:
-                st.success(f"🎯 **Rekomendasi Ensemble**: Gunakan proyeksi ensemble (Rp {ensemble_results['ensemble']['forecast'][0]/1e9:.2f}T) sebagai **best estimate** karena mengurangi bias dari single model.")
-        else:
-            st.warning("⚠️ Hanya 1 model berhasil. Ensemble tidak tersedia.")
+            forecasts_2025 = [float(m["forecast"][0]) for m in successful_models.values()]
+            avg_2025 = float(np.mean(forecasts_2025))
+            std_2025 = float(np.std(forecasts_2025))
+            cv_2025 = (std_2025 / avg_2025 * 100) if avg_2025 else 0.0
+            consistency_msg = (
+                "✅ Konsistensi antar-model sangat baik (`CV < 10%`)."
+                if cv_2025 < 10
+                else "⚠️ Terdapat deviasi cukup lebar antar-model (`CV ≥ 10%`); gunakan rata-rata Ensemble untuk memitigasi bias."
+            )
+            ens_val = format_rupiah_compact(ensemble_results["ensemble"]["forecast"][0], respect_privacy=True)
+            st.info(
+                f"📊 **Konsistensi Proyeksi 2025**: Rata-rata **{format_rupiah_compact(avg_2025, respect_privacy=True)}** | "
+                f"Simpangan Baku **{format_rupiah_compact(std_2025)}** | CV **{cv_2025:.1f}%** — {consistency_msg}\n\n"
+                f"🎯 **Estimasi Terbaik (Ensemble 2025)**: **{ens_val}**"
+            )
 
 
-def app():
+def app() -> None:
     show_projection_page()
 
 

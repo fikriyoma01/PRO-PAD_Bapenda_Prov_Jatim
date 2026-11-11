@@ -1,563 +1,418 @@
-import streamlit as st
-import statsmodels.api as sm
-import plotly.express as px
-import plotly.graph_objects as go
-import pandas as pd
+"""
+Pemodelan Regresi Sederhana — Evaluasi Statistik, Validasi LOOCV, Backtesting & Sensitivitas
+"""
+
+import warnings as _warnings
+
 import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
+import statsmodels.api as sm
+import streamlit as st
 
 from data_loader import load_pad_historis
-from utils.validation_utils import (
-    calculate_all_metrics,
-    leave_one_out_cross_validation,
-    backtest_model,
-    interpret_mape,
-    interpret_r2
-)
+from utils.audit_utils import log_model_run
 from utils.sensitivity_utils import (
     calculate_sensitivity_all_vars,
-    create_tornado_chart,
     create_elasticity_chart,
+    create_tornado_chart,
+    format_sensitivity_table,
     interpret_sensitivity,
-    format_sensitivity_table
 )
-from utils.audit_utils import log_model_run
+from utils.ui_components import (
+    apply_plotly_theme,
+    create_header_with_icon,
+    render_info_box,
+    render_kpi_card,
+    render_page_header,
+    render_section_divider,
+)
+from utils.ui_theme_utils import format_rupiah_compact
+from utils.validation_utils import (
+    backtest_model,
+    calculate_all_metrics,
+    interpret_mape,
+    interpret_r2,
+    leave_one_out_cross_validation,
+)
 
-# Data historis dari layer CSV
-df = load_pad_historis()
+PREDICTORS = ["PDRB", "Rasio Gini", "IPM", "TPT", "Kemiskinan", "Inflasi", "Suku Bunga"]
 
 
-def run_regression(response: str, predictor: str):
-    """
-    Run OLS regression using numpy arrays for consistent predictions
-    """
+def run_regression(df: pd.DataFrame, response: str, predictor: str):
+    """Jalankan regresi OLS menggunakan matriks numpy agar konsisten di seluruh prediksi."""
     X = df[[predictor]].values
     y = df[response].values
-    # Add constant using numpy to avoid DataFrame column name issues
     X_with_const = np.column_stack([np.ones(len(X)), X])
     return sm.OLS(y, X_with_const).fit()
 
 
-def local_css():
-    st.markdown(
-        """
-        <style>
-            .metric-box {
-                border-radius: 12px;
-                padding: 1.5rem;
-                text-align: center;
-                font-weight: bold;
-                font-size: 1.2rem;
-                color: white;
-                margin: 8px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            }
-            .metric-koef {
-                background: linear-gradient(135deg, #64b5f6, #1976d2);
-            }
-            .metric-r2 {
-                background: linear-gradient(135deg, #81c784, #388e3c);
-            }
-            .metric-pval {
-                background: linear-gradient(135deg, #ffb74d, #f57c00);
-            }
-            .metric-box span {
-                display: block;
-                font-size: 1.8rem;
-                margin-top: 6px;
-            }
-            .note-box {
-                background: #fff8e1;
-                border-left: 6px solid #fbc02d;
-                border-radius: 10px;
-                padding: 1rem;
-                margin: 1rem 0;
-                font-size: 0.95rem;
-                color: #4e342e;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            }
-            .note-box strong {
-                color: #e65100;
-            }
-        </style>
-        """,
-        unsafe_allow_html=True,
+def show_modeling_page() -> None:
+    df = load_pad_historis()
+    min_year = int(df["Tahun"].min())
+    max_year = int(df["Tahun"].max())
+
+    render_page_header(
+        title="Pemodelan Regresi & Validasi",
+        subtitle=f"Analisis hubungan ekonometrika PKB & BBNKB terhadap indikator makroekonomi ({min_year}–{max_year})",
+        icon="📊",
     )
 
+    available_predictors = [p for p in PREDICTORS if p in df.columns]
 
-# --- Halaman Pemodelan
-def show_modeling_page():
-    local_css()
+    # --- Konfigurasi Model ---
+    with st.container(border=True):
+        col_sel1, col_sel2 = st.columns(2)
+        with col_sel1:
+            response = st.selectbox("📌 Pilih Variabel Respon (Pajak Daerah)", ["PKB", "BBNKB"])
+        with col_sel2:
+            predictor = st.selectbox("📌 Pilih Variabel Prediktor (Makroekonomi)", available_predictors)
 
-    # Header
-    st.markdown("""
-    <div style='background: linear-gradient(90deg, #1a5fb4, #3584e4); 
-                padding: 18px; border-radius: 12px; margin-bottom: 25px;'>
-        <h1 style='color: white; margin: 0;'>📉 Pemodelan Regresi Sederhana</h1>
-        <p style='color: #f1f1f1; margin: 0;'>PKB & BBNKB terhadap variabel makro (2018–2024)</p>
-    </div>
-    """, unsafe_allow_html=True)
+    model = run_regression(df, response, predictor)
+    intercept = float(model.params[0])
+    coef = float(model.params[1])
+    pval = float(model.pvalues[1])
+    r2 = float(model.rsquared)
 
-    # Pilihan Variabel
-    response = st.selectbox("📌 Pilih Variabel Respon", ["PKB", "BBNKB"])
-    predictors = ["PDRB", "Rasio Gini", "IPM", "TPT", "Kemiskinan", "Inflasi", "Suku Bunga"]
-    predictor = st.selectbox("📌 Pilih Variabel Prediktor (Makroekonomi)", predictors)
-
-    # Jalankan regresi
-    model = run_regression(response, predictor)
-    # Model parameters: [0] = intercept, [1] = coefficient
-    intercept = model.params[0]
-    coef = model.params[1]
-    pval = model.pvalues[1]
-    r2 = model.rsquared
-
-    # Log to audit trail
     log_model_run(
         response=response,
         predictor=predictor,
         r2=r2,
         details={
-            'coefficient': float(coef),
-            'intercept': float(intercept),
-            'p_value': float(pval)
-        }
+            "coefficient": coef,
+            "intercept": intercept,
+            "p_value": pval,
+        },
     )
 
-    # --- Explanation Card untuk Metrics
-    with st.expander("ℹ️ Panduan Memahami Metrics Regresi", expanded=False):
-        st.markdown("""
-        ### 📊 Penjelasan Metrics Regresi
+    # --- Ringkasan Parameter Regresi ---
+    create_header_with_icon(
+        f"Hasil Estimasi OLS: {response} terhadap {predictor}",
+        "📐",
+        subtitle="Parameter model regresi linear sederhana beserta tingkat signifikansi statistik",
+    )
 
-        **1. Koefisien (β - Beta)**
-        - **Definisi**: Menunjukkan seberapa besar perubahan pada variabel respon (PKB/BBNKB) jika prediktor (variabel makro) berubah 1 unit
-        - **Interpretasi**:
-          - Jika β = +500.000.000, maka kenaikan 1% PDRB akan meningkatkan PKB sebesar Rp 500 juta
-          - Nilai positif (+): prediktor meningkatkan respon
-          - Nilai negatif (-): prediktor menurunkan respon
-        - **Contoh**: Koefisien PDRB terhadap PKB = 800M artinya setiap kenaikan 1% PDRB meningkatkan PKB Rp 800M
+    k1, k2, k3 = st.columns(3)
+    with k1:
+        render_kpi_card(
+            label="Koefisien Regresi (β₁)",
+            value=format_rupiah_compact(coef, signed=True),
+            delta="Arah Positif" if coef >= 0 else "Arah Negatif",
+            delta_positive=coef >= 0,
+            subtitle=f"Perubahan per +1 unit {predictor}",
+            icon="📈",
+            variant="primary",
+        )
+    with k2:
+        r2_label = "Kuat" if r2 >= 0.7 else "Sedang" if r2 >= 0.4 else "Lemah"
+        render_kpi_card(
+            label="Koefisien Determinasi (R²)",
+            value=f"{r2:.3f} ({r2 * 100:.1f}%)",
+            delta=f"Daya Jelas {r2_label}",
+            delta_positive=r2 >= 0.4,
+            subtitle="Proporsi variasi yang dijelaskan model",
+            icon="🎯",
+            variant="success" if r2 >= 0.5 else "warning",
+        )
+    with k3:
+        sig = pval < 0.05
+        render_kpi_card(
+            label="Signifikansi (p-value)",
+            value=f"{pval:.4f}",
+            delta="Signifikan (p < 0.05)" if sig else "Tidak Signifikan (p ≥ 0.05)",
+            delta_positive=sig,
+            subtitle="Uji hipotesis dua arah pada α = 5%",
+            icon="🔬",
+            variant="success" if sig else "warning",
+        )
 
-        **2. R² (R-Squared / Coefficient of Determination)**
-        - **Definisi**: Persentase variasi data yang dijelaskan oleh model (0 - 1)
-        - **Interpretasi**:
-          - **R² > 0.7**: Model sangat baik menjelaskan data (>70%)
-          - **R² 0.4 - 0.7**: Model cukup baik (40-70%)
-          - **R² < 0.4**: Model lemah (<40%)
-        - **Catatan**: R² tinggi ≠ model bagus untuk prediksi! Dengan hanya 7 data, R² tinggi bisa tanda overfitting
-        - **Contoh**: R² = 0.85 artinya 85% variasi PKB dijelaskan oleh PDRB, sisanya 15% oleh faktor lain
+    # Persamaan & Interpretasi
+    sign_str = "+" if coef >= 0 else "-"
+    st.markdown(
+        f"""
+        <div class="formula-box">
+            <strong>Persamaan Regresi:</strong>&nbsp;
+            {response} = {intercept:,.0f} {sign_str} {abs(coef):,.0f} × ({predictor})
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-        **3. p-value (Probabilitas)**
-        - **Definisi**: Probabilitas bahwa hubungan yang ditemukan terjadi secara kebetulan (bukan karena pengaruh nyata)
-        - **Interpretasi**:
-          - **p < 0.05**: Signifikan secara statistik (hubungan kemungkinan besar nyata) ✅
-          - **p > 0.05**: Tidak signifikan (hubungan mungkin kebetulan) ⚠️
-        - **Catatan**: Dengan dataset kecil (n=7), p-value harus diinterpretasi hati-hati
-        - **Contoh**: p-value = 0.03 artinya hanya 3% kemungkinan hubungan ini terjadi secara kebetulan
-
-        ---
-        ### ⚠️ **Peringatan Penting untuk Dataset Kecil**
-
-        Dataset PAD hanya 7 tahun (2018-2024), yang berarti:
-        - ✗ **Risiko Overfitting Tinggi**: Model bisa terlalu "pas" dengan data historis tapi gagal prediksi masa depan
-        - ✗ **Power Statistik Rendah**: Sulit mendeteksi hubungan nyata karena sampel kecil
-        - ✗ **Sensitivitas Outlier**: 1 data outlier dapat mengubah hasil drastis
-        - ✓ **Solusi**: Gunakan ensemble modeling, cross-validation, dan interpretasi hati-hati
-        """)
-
-    # --- Kartu hasil
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.markdown(f"<div class='metric-box metric-koef'>Koefisien<span>{coef:,.2f}</span></div>", unsafe_allow_html=True)
-    with col2:
-        st.markdown(f"<div class='metric-box metric-r2'>R²<span>{r2:.3f}</span></div>", unsafe_allow_html=True)
-    with col3:
-        st.markdown(f"<div class='metric-box metric-pval'>p-value<span>{pval:.3f}</span></div>", unsafe_allow_html=True)
-
-    # Persamaan Regresi
-    st.subheader("📑 Persamaan Regresi")
-    st.info(f"**{response} = {intercept:.3f} + {coef:.3f} × {predictor}**")
-
-    # Interpretasi
-    arah = "penambah 📈" if coef > 0 else "pengurang 📉"
+    arah = "penambah (positif)" if coef > 0 else "pengurang (negatif)"
     if pval < 0.05:
-        st.success(f"✅ {predictor} signifikan sebagai faktor **{arah}** terhadap {response}.")
+        st.success(
+            f"✅ Secara statistik **{predictor}** berpengaruh signifikan (`p = {pval:.4f} < 0.05`) sebagai faktor **{arah}** terhadap **{response}**."
+        )
     else:
-        st.warning(f"⚠️ {predictor} tidak signifikan, namun bisa sebagai faktor **{arah}**.")
-    
-    # Catatan
-    st.markdown("""
-    <div class='note-box'>
-    ⚠️ <strong>Catatan:</strong> Hasil signifikan (p-value) perlu ditafsirkan dengan hati-hati.<br>
-    Dataset hanya mencakup 7 tahun (2018–2024), sehingga jumlah observasi sangat terbatas. 
-    Hal ini dapat menyebabkan:
-    <ul>
-    <li>📑 <b>Overfitting</b> karena model menyesuaikan pola jangka pendek.</li>
-    <li>🔗 <b>Multikolinearitas</b> antar variabel makro yang tinggi.</li>
-    <li>📊 <b>Variabilitas tinggi</b> yang membuat koefisien tidak stabil.</li>
-    </ul>
-    Dengan keterbatasan ini, analisis lebih lanjut dengan data jangka panjang sangat disarankan.
-    </div>
-    """, unsafe_allow_html=True)
+        st.warning(
+            f"⚠️ Pengaruh **{predictor}** terhadap **{response}** belum signifikan pada α = 5% (`p = {pval:.4f}`), dengan kecenderungan arah **{arah}**."
+        )
 
-    # Detail summary
-    with st.expander("🔍 Detail Summary Model"):
-        # omni_normtest di summary() memunculkan ValueWarning saat n<8 (data 7 tahun)
-        import warnings as _warnings
-        with _warnings.catch_warnings():
-            _warnings.simplefilter("ignore")
-            st.text(model.summary())
+    col_exp1, col_exp2 = st.columns(2)
+    with col_exp1:
+        with st.expander("ℹ️ Panduan Membaca Parameter Regresi"):
+            st.markdown(
+                f"""
+                - **Koefisien (β₁)**: Setiap kenaikan 1 satuan `{predictor}` berasosiasi dengan perubahan `{response}` sebesar **{format_rupiah_compact(coef, signed=True)}**.
+                - **R² ({r2:.3f})**: Sebesar **{r2 * 100:.1f}%** variasi historis `{response}` dapat dijelaskan oleh pergerakan `{predictor}`.
+                - **p-value ({pval:.4f})**: Nilai di bawah `0.05` menandakan hubungan linear kecil kemungkinannya terjadi secara kebetulan.
+                """
+            )
+    with col_exp2:
+        with st.expander("🔍 Detail Statistik Lengkap (Statsmodels OLS Summary)"):
+            with _warnings.catch_warnings():
+                _warnings.simplefilter("ignore")
+                st.code(model.summary().as_text(), language="text")
 
-    # Visualisasi scatter + regresi
-    st.subheader("📈 Visualisasi Scatterplot dengan Garis Regresi")
+    render_info_box(
+        f"<strong>Catatan Metodologis Sampel Terbatas:</strong> Observasi mencakup <strong>{len(df)} tahun ({min_year}–{max_year})</strong>. "
+        "Gunakan hasil uji signifikansi bersama metrik validasi silang (LOOCV) dan dekomposisi objek pajak agar terhindar dari risiko overfitting.",
+        box_type="warning",
+    )
+
+    # --- Visualisasi Scatterplot + Garis Regresi ---
+    create_header_with_icon(
+        "Visualisasi Regresi Linear",
+        "📉",
+        subtitle=f"Sebaran observasi aktual {min_year}–{max_year} beserta garis estimasi OLS",
+    )
+
     df_sorted = df.sort_values(predictor).copy()
-
-    # Prepare data for prediction using numpy arrays for consistency
     X_sorted = df_sorted[[predictor]].values
     X_sorted_with_const = np.column_stack([np.ones(len(X_sorted)), X_sorted])
     df_sorted["pred"] = model.predict(X_sorted_with_const)
 
-    # Create figure using go.Figure for better control
-    fig = go.Figure()
-
-    # Add scatter plot
-    fig.add_trace(go.Scatter(
-        x=df[predictor],
-        y=df[response],
-        mode='markers+text',
-        name='Data Aktual',
-        text=df["Tahun"],
-        textposition='top center',
-        marker=dict(size=10, color='#1e88e5'),
-        hovertemplate='<b>Tahun %{text}</b><br>' +
-                      f'{predictor}: %{{x:.2f}}<br>' +
-                      f'{response}: %{{y:,.0f}}<extra></extra>'
-    ))
-
-    # Add regression line
-    fig.add_trace(go.Scatter(
-        x=df_sorted[predictor],
-        y=df_sorted["pred"],
-        mode='lines',
-        name='Garis Regresi',
-        line=dict(color='#ff6f00', width=3, dash='dash'),
-        hovertemplate=f'{predictor}: %{{x:.2f}}<br>' +
-                      'Prediksi: %{y:,.0f}<extra></extra>'
-    ))
-
-    fig.update_layout(
-        title=f"{response} vs {predictor}",
-        xaxis_title=predictor,
-        yaxis_title=response,
-        yaxis=dict(tickformat=",.0f"),
-        height=700,
-        template='plotly_white',
-        hovermode='closest',
-        showlegend=True,
-        margin=dict(l=100, r=100, t=120, b=100),
-        legend=dict(
-            yanchor="top",
-            y=0.99,
-            xanchor="left",
-            x=0.01
+    with st.container(border=True):
+        fig = go.Figure()
+        fig.add_trace(
+            go.Scatter(
+                x=df[predictor],
+                y=df[response],
+                mode="markers+text",
+                name="Observasi Aktual",
+                text=df["Tahun"],
+                textposition="top center",
+                marker=dict(size=11, color="#1a5fb4", line=dict(width=2, color="#ffffff")),
+                hovertemplate=(
+                    "<b>Tahun %{text}</b><br>"
+                    f"{predictor}: %{{x:.2f}}<br>"
+                    f"{response}: Rp %{{y:,.0f}}<extra></extra>"
+                ),
+            )
         )
+        fig.add_trace(
+            go.Scatter(
+                x=df_sorted[predictor],
+                y=df_sorted["pred"],
+                mode="lines",
+                name="Garis Estimasi OLS",
+                line=dict(color="#f59e0b", width=3, dash="dash"),
+                hovertemplate=f"{predictor}: %{{x:.2f}}<br>Estimasi OLS: Rp %{{y:,.0f}}<extra></extra>",
+            )
+        )
+        apply_plotly_theme(
+            fig,
+            title=f"Hubungan {response} vs {predictor} (R² = {r2:.3f})",
+            height=440,
+            xaxis_title=predictor,
+            yaxis_title=f"{response} (Rupiah)",
+            is_currency=True,
+        )
+        fig.update_layout(
+            hovermode="closest",
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    render_section_divider()
+
+    # --- Validasi Model & Performance Metrics ---
+    create_header_with_icon(
+        "Validasi Model & Metrik Performa",
+        "✅",
+        subtitle="Evaluasi akurasi in-sample (Training), out-of-sample (LOOCV), dan pengujian historis (Backtesting)",
     )
-    st.plotly_chart(fig, use_container_width=True)
 
-    # ===== MODEL VALIDATION METRICS =====
-    st.markdown("---")
-    st.header("✅ Validasi Model & Performance Metrics")
-
-    st.markdown("""
-    Bagian ini menampilkan metrik validasi untuk mengevaluasi kualitas prediksi model.
-    Dengan dataset kecil (n=7), metrik ini membantu memahami ketidakpastian model.
-    """)
-
-    # Calculate fitted values and residuals
     X_full = df[[predictor]].values
     X_full_with_const = np.column_stack([np.ones(len(X_full)), X_full])
     y_fitted = model.predict(X_full_with_const)
     y_actual = df[response].values
 
-    # Training metrics
     train_metrics = calculate_all_metrics(y_actual, y_fitted)
+    cv_results = leave_one_out_cross_validation(df, response, predictor)
 
-    col1, col2 = st.columns(2)
+    col_val1, col_val2 = st.columns(2)
+    with col_val1:
+        with st.container(border=True):
+            st.markdown("#### 📊 Training Metrics (In-Sample)")
+            st.caption("Evaluasi error pada seluruh data historis yang digunakan untuk melatih model.")
+            metrics_df = pd.DataFrame(
+                {
+                    "Metrik": list(train_metrics.keys()),
+                    "Nilai": [
+                        format_rupiah_compact(v) if k in ("RMSE", "MAE") else f"{v:,.3f}" if k == "R²" else f"{v:,.2f}%"
+                        for k, v in train_metrics.items()
+                    ],
+                }
+            )
+            st.dataframe(metrics_df, use_container_width=True, hide_index=True)
+            r2_cat, r2_desc = interpret_r2(train_metrics["R²"])
+            mape_cat, mape_desc = interpret_mape(train_metrics["MAPE (%)"])
+            st.info(f"**R²**: {r2_cat} — {r2_desc}\n\n**MAPE**: {mape_cat} — {mape_desc}")
 
-    with col1:
-        st.subheader("📊 Training Metrics")
-        st.markdown("""
-        Metrik pada data yang digunakan untuk melatih model:
-        """)
+    with col_val2:
+        with st.container(border=True):
+            st.markdown("#### 🔄 Cross-Validation (LOOCV)")
+            st.caption("Melatih model n kali dengan menyisihkan 1 tahun secara bergantian sebagai data uji.")
+            cv_metrics_df = pd.DataFrame(
+                {
+                    "Metrik": list(cv_results["metrics"].keys()),
+                    "Nilai": [
+                        format_rupiah_compact(v)
+                        if k in ("RMSE", "MAE")
+                        else f"{v:,.3f}"
+                        if k == "R²"
+                        else f"{v:,.2f}%"
+                        for k, v in cv_results["metrics"].items()
+                    ],
+                }
+            )
+            st.dataframe(cv_metrics_df, use_container_width=True, hide_index=True)
 
-        # Display metrics
-        metrics_df = pd.DataFrame({
-            'Metric': list(train_metrics.keys()),
-            'Value': [f"{v:,.2f}" for v in train_metrics.values()]
-        })
-        st.dataframe(metrics_df, use_container_width=True, hide_index=True)
+            train_mape = train_metrics["MAPE (%)"]
+            cv_mape = cv_results["metrics"]["MAPE (%)"]
+            diff_pct = ((cv_mape - train_mape) / train_mape * 100) if train_mape else 0.0
+            if abs(diff_pct) <= 25:
+                st.success(f"✅ **Model Stabil**: Selisih MAPE LOOCV terhadap training terkendali (`{diff_pct:+.1f}%`).")
+            else:
+                st.warning(
+                    f"⚠️ **Indikasi Sensitivitas Sampel**: MAPE LOOCV meningkat `{diff_pct:+.1f}%` dibanding in-sample."
+                )
 
-        # Interpretations
-        r2_cat, r2_desc = interpret_r2(train_metrics['R²'])
-        mape_cat, mape_desc = interpret_mape(train_metrics['MAPE (%)'])
+    # --- Backtesting ---
+    create_header_with_icon(
+        "Backtesting Historis (Train 2018–2022 → Test 2023–2024)",
+        "⏮️",
+        subtitle="Simulasi akurasi peramalan seandainya model dilatih hingga 2022 untuk memprediksi 2 tahun terakhir",
+    )
 
-        st.info(f"""
-        **R² Interpretation**: {r2_cat}
-        {r2_desc}
+    backtest_results = backtest_model(df, response, predictor, test_years=2)
+    col_bt1, col_bt2 = st.columns([1.75, 1])
 
-        **MAPE Interpretation**: {mape_cat}
-        {mape_desc}
-        """)
+    with col_bt1:
+        with st.container(border=True):
+            fig_backtest = go.Figure()
+            fig_backtest.add_trace(
+                go.Scatter(
+                    x=backtest_results["test_years"],
+                    y=backtest_results["y_test"],
+                    mode="lines+markers",
+                    name="Realisasi Aktual",
+                    line=dict(color="#1a5fb4", width=3.5),
+                    marker=dict(size=10),
+                    hovertemplate="Tahun %{x}<br>Aktual: Rp %{y:,.0f}<extra></extra>",
+                )
+            )
+            fig_backtest.add_trace(
+                go.Scatter(
+                    x=backtest_results["test_years"],
+                    y=backtest_results["y_pred"],
+                    mode="lines+markers",
+                    name="Prediksi Backtest",
+                    line=dict(color="#f59e0b", width=3.5, dash="dash"),
+                    marker=dict(size=10, symbol="diamond"),
+                    hovertemplate="Tahun %{x}<br>Prediksi: Rp %{y:,.0f}<extra></extra>",
+                )
+            )
+            apply_plotly_theme(
+                fig_backtest,
+                title=f"Uji Backtest {response} (Periode Uji {min(backtest_results['test_years'])}–{max(backtest_results['test_years'])})",
+                height=380,
+                xaxis_title="Tahun Uji",
+                yaxis_title=f"{response} (Rupiah)",
+                is_currency=True,
+            )
+            fig_backtest.update_xaxes(dtick=1)
+            fig_backtest.update_layout(
+                hovermode="x unified",
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            )
+            st.plotly_chart(fig_backtest, use_container_width=True)
 
-        # Explanation
-        with st.expander("ℹ️ Penjelasan Metrics"):
-            st.markdown("""
-            **RMSE (Root Mean Squared Error)**:
-            - Rata-rata error dalam satuan asli (Rupiah)
-            - Semakin kecil semakin baik
-            - Sensitif terhadap outlier
+    with col_bt2:
+        with st.container(border=True):
+            st.markdown("#### 📋 Ringkasan Komparasi Validasi")
+            comparison_df = pd.DataFrame(
+                {
+                    "Metrik": ["RMSE", "MAE", "MAPE (%)", "R²"],
+                    "Training": [
+                        format_rupiah_compact(train_metrics["RMSE"]),
+                        format_rupiah_compact(train_metrics["MAE"]),
+                        f"{train_metrics['MAPE (%)']:.2f}%",
+                        f"{train_metrics['R²']:.3f}",
+                    ],
+                    "LOOCV": [
+                        format_rupiah_compact(cv_results["metrics"]["RMSE"]),
+                        format_rupiah_compact(cv_results["metrics"]["MAE"]),
+                        f"{cv_results['metrics']['MAPE (%)']:.2f}%",
+                        f"{cv_results['metrics']['R²']:.3f}",
+                    ],
+                    "Backtest": [
+                        format_rupiah_compact(backtest_results["metrics"]["RMSE"]),
+                        format_rupiah_compact(backtest_results["metrics"]["MAE"]),
+                        f"{backtest_results['metrics']['MAPE (%)']:.2f}%",
+                        f"{backtest_results['metrics']['R²']:.3f}",
+                    ],
+                }
+            )
+            st.dataframe(comparison_df, use_container_width=True, hide_index=True)
+            st.caption(
+                "Catatan: R² pada 2 titik uji backtest sangat sensitif terhadap fluktuasi tahun tunggal; prioritaskan metrik MAPE & MAE."
+            )
 
-            **MAE (Mean Absolute Error)**:
-            - Rata-rata error absolut
-            - Lebih robust terhadap outlier dibanding RMSE
-            - Interpretasi lebih mudah
+    render_section_divider()
 
-            **MAPE (Mean Absolute Percentage Error)**:
-            - Error dalam bentuk persentase
-            - Mudah dipahami (5% = error 5%)
-            - < 10% = sangat baik, < 20% = baik
+    # --- Sensitivity Analysis ---
+    create_header_with_icon(
+        "Analisis Sensitivitas & Elastisitas Makro",
+        "🔬",
+        subtitle=f"Simulasi dampak guncangan ±10% pada masing-masing indikator makro terhadap proyeksi {response}",
+    )
 
-            **R² (Coefficient of Determination)**:
-            - Proporsi variasi yang dijelaskan (0-1)
-            - 0.7-1.0 = kuat, 0.4-0.7 = sedang, <0.4 = lemah
-            """)
-
-    with col2:
-        st.subheader("🔄 Cross-Validation (LOOCV)")
-        st.markdown("""
-        Leave-One-Out Cross-Validation: Melatih model n kali,
-        setiap kali meninggalkan 1 observasi untuk testing.
-        """)
-
-        # Perform LOOCV
-        with st.spinner("Running cross-validation..."):
-            cv_results = leave_one_out_cross_validation(df, response, predictor)
-
-        # Display CV metrics
-        cv_metrics_df = pd.DataFrame({
-            'Metric': list(cv_results['metrics'].keys()),
-            'Value': [f"{v:,.2f}" for v in cv_results['metrics'].values()]
-        })
-        st.dataframe(cv_metrics_df, use_container_width=True, hide_index=True)
-
-        # Comparison
-        improvement = ((train_metrics['MAPE (%)'] - cv_results['metrics']['MAPE (%)']) /
-                      train_metrics['MAPE (%)'] * 100)
-
-        if abs(improvement) < 10:
-            st.success(f"✅ Model stabil! CV MAPE hanya berbeda {abs(improvement):.1f}% dari training.")
-        elif improvement > 0:
-            st.warning(f"⚠️ Model sedikit overfit. CV MAPE lebih buruk {abs(improvement):.1f}%.")
-        else:
-            st.info(f"💡 CV MAPE lebih baik {abs(improvement):.1f}%, kemungkinan kebetulan.")
-
-    # ===== BACKTESTING =====
-    st.markdown("---")
-    st.subheader("⏮️ Backtesting: Train on Past, Test on Recent")
-
-    st.markdown("""
-    Backtesting melatih model pada data lama (2018-2022) dan menguji pada data baru (2023-2024).
-    Ini mensimulasikan performa model jika digunakan untuk prediksi real-time.
-    """)
-
-    # Perform backtesting
-    with st.spinner("Running backtest..."):
-        backtest_results = backtest_model(df, response, predictor, test_years=2)
-
-    col1, col2 = st.columns([2, 1])
-
-    with col1:
-        # Backtest visualization
-        fig_backtest = go.Figure()
-
-        # Actual values
-        fig_backtest.add_trace(go.Scatter(
-            x=backtest_results['test_years'],
-            y=backtest_results['y_test'],
-            mode='lines+markers',
-            name='Actual (Test Set)',
-            line=dict(color='#1976d2', width=3),
-            marker=dict(size=10)
-        ))
-
-        # Predicted values
-        fig_backtest.add_trace(go.Scatter(
-            x=backtest_results['test_years'],
-            y=backtest_results['y_pred'],
-            mode='lines+markers',
-            name='Predicted',
-            line=dict(color='#f57c00', width=3, dash='dash'),
-            marker=dict(size=10, symbol='diamond')
-        ))
-
-        fig_backtest.update_layout(
-            title=f"Backtest: {response} Actual vs Predicted (2023-2024)",
-            xaxis_title="Tahun",
-            yaxis_title=f"{response} (Rupiah)",
-            template="plotly_white",
-            hovermode='x unified',
-            yaxis_tickformat=",.0f",
-            height=500,
-            margin=dict(l=80, r=80, t=100, b=80)
-        )
-
-        st.plotly_chart(fig_backtest, use_container_width=True)
-
-    with col2:
-        st.markdown("**Backtest Metrics:**")
-        backtest_metrics_df = pd.DataFrame({
-            'Metric': list(backtest_results['metrics'].keys()),
-            'Value': [f"{v:,.2f}" for v in backtest_results['metrics'].values()]
-        })
-        st.dataframe(backtest_metrics_df, use_container_width=True, hide_index=True)
-
-        st.markdown("**Model Parameters:**")
-        params_df = pd.DataFrame({
-            'Parameter': ['Intercept', 'Coefficient', 'R²', 'p-value'],
-            'Value': [
-                f"{backtest_results['model_params']['intercept']:,.2f}",
-                f"{backtest_results['model_params']['coefficient']:,.2f}",
-                f"{backtest_results['model_params']['r2']:.3f}",
-                f"{backtest_results['model_params']['p_value']:.3f}"
-            ]
-        })
-        st.dataframe(params_df, use_container_width=True, hide_index=True)
-
-    # Comparison table
-    st.markdown("**📋 Perbandingan: Training vs CV vs Backtest**")
-
-    comparison_df = pd.DataFrame({
-        'Metric': ['RMSE', 'MAE', 'MAPE (%)', 'R²'],
-        'Training': [
-            f"{train_metrics['RMSE']:,.0f}",
-            f"{train_metrics['MAE']:,.0f}",
-            f"{train_metrics['MAPE (%)']:.2f}",
-            f"{train_metrics['R²']:.3f}"
-        ],
-        'Cross-Val (LOOCV)': [
-            f"{cv_results['metrics']['RMSE']:,.0f}",
-            f"{cv_results['metrics']['MAE']:,.0f}",
-            f"{cv_results['metrics']['MAPE (%)']:.2f}",
-            f"{cv_results['metrics']['R²']:.3f}"
-        ],
-        'Backtest (2023-24)': [
-            f"{backtest_results['metrics']['RMSE']:,.0f}",
-            f"{backtest_results['metrics']['MAE']:,.0f}",
-            f"{backtest_results['metrics']['MAPE (%)']:.2f}",
-            f"{backtest_results['metrics']['R²']:.3f}"
-        ]
-    })
-
-    st.dataframe(comparison_df, use_container_width=True, hide_index=True)
-
-    st.warning("""
-    ⚠️ **Catatan Penting**:
-    Dengan hanya 7 observasi, metrik validasi memiliki **variance tinggi** dan **reliability rendah**.
-    Hasil backtest hanya menggunakan 2 data point untuk testing, sehingga hasilnya sangat sensitif terhadap nilai-nilai tersebut.
-    Gunakan metrik ini sebagai **indikator**, bukan **bukti definitif** kualitas model.
-    """)
-
-    # --- Sensitivity Analysis Section ---
-    st.markdown("---")
-    st.header("🔬 Sensitivity Analysis")
-
-    st.markdown("""
-    **Sensitivity Analysis** menunjukkan seberapa sensitif proyeksi terhadap perubahan pada variabel prediktor.
-    Analisis ini membantu mengidentifikasi variabel mana yang memiliki dampak terbesar terhadap proyeksi PAD.
-    """)
-
-    with st.expander("ℹ️ Tentang Sensitivity Analysis"):
-        st.markdown("""
-        ### 📚 Apa itu Sensitivity Analysis?
-
-        Sensitivity analysis mengukur bagaimana perubahan pada variabel input (prediktor) mempengaruhi output (proyeksi PAD).
-
-        **Metrik yang digunakan:**
-
-        1. **Dampak (Impact)**: Perubahan absolut dalam proyeksi PAD ketika prediktor berubah ±10%
-        2. **Range**: Total rentang perubahan (upper impact - lower impact)
-        3. **Elastisitas**: Rasio perubahan % output terhadap perubahan % input
-           - Elastisitas > 1: Variabel **elastis** (sangat sensitif)
-           - Elastisitas < 1: Variabel **inelastis** (kurang sensitif)
-
-        **Tornado Chart** menampilkan hasil secara visual, dengan variabel paling berpengaruh di bagian atas.
-
-        **Kegunaan:**
-        - Identifikasi variabel kunci yang perlu dimonitor
-        - Prioritas pengumpulan data dan forecasting
-        - Risk assessment: variabel mana yang paling berisiko jika salah prediksi
-        """)
-
-    # Calculate sensitivity for all macro variables
-    macro_vars = ["PDRB", "Rasio Gini", "IPM", "TPT", "Kemiskinan", "Inflasi", "Suku Bunga"]
-
-    # Get base values (2024 data - last row)
-    base_values = {var: float(df.iloc[-1][var]) for var in macro_vars}
-
-    st.subheader("🎯 Sensitivity Analysis Results")
-
-    # Perform sensitivity analysis
-    with st.spinner("Calculating sensitivity for all variables..."):
-        sens_df = calculate_sensitivity_all_vars(
-            df=df,
-            response=response,
-            predictors=macro_vars,
-            base_values=base_values,
-            variation_pct=0.1  # ±10%
-        )
-
-    # Display interpretation
+    base_values = {var: float(df.iloc[-1][var]) for var in available_predictors}
+    sens_df = calculate_sensitivity_all_vars(
+        df=df,
+        response=response,
+        predictors=available_predictors,
+        base_values=base_values,
+        variation_pct=0.1,
+    )
     interpretation = interpret_sensitivity(sens_df)
 
-    col1, col2 = st.columns(2)
-    with col1:
+    c_sens1, c_sens2 = st.columns(2)
+    with c_sens1:
         st.info(f"📊 {interpretation['most_impactful']}")
-    with col2:
+    with c_sens2:
         st.info(f"📉 {interpretation['least_impactful']}")
 
-    st.caption(f"✨ {interpretation['high_elasticity']}")
-    st.caption(f"🔒 {interpretation['low_elasticity']}")
+    col_viz1, col_viz2 = st.columns(2)
+    with col_viz1:
+        with st.container(border=True):
+            tornado_fig = create_tornado_chart(sens_df, response, variation_pct=0.1)
+            tornado_fig.update_layout(height=420)
+            st.plotly_chart(tornado_fig, use_container_width=True)
+    with col_viz2:
+        with st.container(border=True):
+            elasticity_fig = create_elasticity_chart(sens_df, response)
+            elasticity_fig.update_layout(height=420)
+            st.plotly_chart(elasticity_fig, use_container_width=True)
 
-    # Display detailed table
-    st.subheader("📋 Tabel Detail Sensitivity")
-    formatted_table = format_sensitivity_table(sens_df)
-    st.dataframe(formatted_table, use_container_width=True, hide_index=True)
-
-    # Tornado chart
-    st.subheader("🌪️ Tornado Chart")
-    tornado_fig = create_tornado_chart(sens_df, response, variation_pct=0.1)
-    st.plotly_chart(tornado_fig, use_container_width=True)
-
-    st.markdown("""
-    💡 **Cara membaca Tornado Chart:**
-    - Semakin panjang bar, semakin besar dampak variabel tersebut
-    - Variabel di bagian atas = paling berpengaruh
-    - Merah (kiri) = dampak jika variabel turun 10%
-    - Hijau (kanan) = dampak jika variabel naik 10%
-    """)
-
-    # Elasticity chart
-    st.subheader("📊 Elasticity Coefficients")
-    elasticity_fig = create_elasticity_chart(sens_df, response)
-    st.plotly_chart(elasticity_fig, use_container_width=True)
-
-    st.markdown("""
-    💡 **Interpretasi Elasticity:**
-    - **Elastisitas > 1**: Revenue sangat responsif terhadap perubahan variabel (elastis)
-    - **Elastisitas ≈ 1**: Perubahan proporsional (unitary elastic)
-    - **Elastisitas < 1**: Revenue kurang responsif (inelastis)
-    - **Elastisitas negatif**: Hubungan terbalik (revenue turun jika variabel naik)
-    """)
+    with st.expander("📋 Lihat Tabel Detail Sensitivitas & Elastisitas Semua Variabel", expanded=False):
+        formatted_table = format_sensitivity_table(sens_df)
+        st.dataframe(formatted_table, use_container_width=True, hide_index=True)
 
 
-def app():
+def app() -> None:
     show_modeling_page()
 
 
