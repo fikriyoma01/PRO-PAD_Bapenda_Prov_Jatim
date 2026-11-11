@@ -1,4 +1,4 @@
-﻿"""
+"""
 Insight Terpadu PAD 2018–2026 Page
 Menyatukan tren historis, dinamika makroekonomi, pemodelan regresi, dan dekomposisi potensi.
 """

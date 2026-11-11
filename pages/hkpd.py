@@ -1,4 +1,4 @@
-﻿"""
+"""
 Implementasi Skenario HKPD Page (UU Nomor 1 Tahun 2022)
 Simulasi pembagian porsi penerimaan PKB & BBNKB antara Pemerintah Provinsi dan Kabupaten/Kota.
 """
